@@ -234,7 +234,7 @@
   var BINDING = { points: POINTS, seats: seatMap(POINTS) };
 
   // working-logo.js
-  var LOGO_SIZE = 20;
+  var LOGO_SIZE = 24;
   var LOGO_SPEED = 1.7;
   var canvases = /* @__PURE__ */ new Set();
   function prepareCanvas(canvas) {

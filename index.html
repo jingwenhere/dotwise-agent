@@ -141,7 +141,7 @@
             </button>
             <img class="selection-review-divider" src="assets/figma/selection-confirm-divider.svg" alt="" />
             <button class="review-icon" id="revertSelection" type="button" aria-label="Undo AI edit"><img src="assets/figma/selection-undo.svg" alt="" /></button>
-            <button class="review-confirm" id="confirmSelection" type="button" aria-label="Accept AI edit"><img src="assets/figma/selection-accept.svg" alt="" /></button>
+            <button class="review-confirm" id="confirmSelection" type="button" aria-label="Accept AI edit"><img src="assets/figma/ai-block-check.svg" alt="" /></button>
           </div>
         </div>
 
@@ -150,13 +150,13 @@
       <aside class="agent-panel" aria-label="Agent panel">
         <header class="agent-header">
           <div class="agent-tabs" role="tablist" aria-label="Agent views">
+            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
             <button class="subagent-menu-trigger" id="subagentEntry" type="button" aria-label="Open subagent menu" aria-expanded="false" aria-controls="subagentMenu">
               <span class="todo-icon" aria-hidden="true">
                 <img src="assets/figma/agent-list-row.svg" alt="" />
                 <img src="assets/figma/agent-list-row.svg" alt="" />
               </span>
             </button>
-            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
             <button class="agent-workspace-tab subagent-tab-label" id="subagentPanelTab" type="button" role="tab" aria-selected="false" aria-controls="subagentPopover" tabindex="-1" hidden>Subagent</button>
             <span class="agent-count" id="agentCount" hidden>0</span>
           </div>
@@ -171,7 +171,7 @@
           <section class="review-chat-block" id="reviewChatBlock" aria-live="polite" hidden></section>
         </div>
 
-        <section class="subagent-popover" id="subagentPopover" hidden role="tabpanel" aria-labelledby="subagentPanelTab">
+        <section class="subagent-popover" id="subagentPopover" hidden role="region" aria-label="Subagent detail">
           <div class="subagent-list-view" id="subagentListView">
             <div class="subagent-list-scroll">
               <section class="status-section" aria-labelledby="activeSubagentHeading">
@@ -189,7 +189,7 @@
 
           <article class="subagent-detail-view" id="subagentDetailView" hidden aria-live="polite">
             <header class="subagent-detail-header">
-              <button class="subagent-back" id="subagentBack" type="button" aria-label="Back to all subagents">
+              <button class="subagent-back" id="subagentBack" type="button" aria-label="Back to main session">
                 <img src="assets/figma/chevron-down.svg" alt="" />
               </button>
               <div id="subagentDetailIdentity"></div>

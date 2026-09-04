@@ -1,6 +1,6 @@
 import { BINDING, OPTS, frameLogoWork, paintFrame } from './assets/figma/working-logo-geometry.js';
 
-const LOGO_SIZE = 20;
+const LOGO_SIZE = 24;
 const LOGO_SPEED = 1.7;
 const canvases = new Set();
 
