@@ -1,4 +1,7 @@
 (() => {
+  const cuelume = import('https://cdn.jsdelivr.net/npm/cuelume@0.2.2/dist/index.js')
+    .catch(() => null);
+
   const documentSurface = document.getElementById('documentSurface');
   const documentPage = document.getElementById('documentPage');
   const documentWorkspace = document.querySelector('.document-workspace');
@@ -470,6 +473,7 @@
         || subagentTasks.get(latestSubagentTaskId);
     }
     if (!task) return null;
+    const wasDone = task.state === 'done';
     task.cancelStream?.();
     task.cancelStream = null;
     task.title = title;
@@ -482,6 +486,9 @@
     clearDocumentTaskState(task, 1600);
     renderSubagentLists();
     if (activeSubagentDetailId === task.id) renderSubagentDetail(task);
+    if (!wasDone) {
+      void cuelume.then((module) => module?.play('scan'));
+    }
     return task;
   }
 
