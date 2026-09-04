@@ -3,771 +3,262 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gradient — Agent presence prototype</title>
-  <style>
-    :root {
-      --ink: #000;
-      --ink-2: #646464;
-      --ink-3: #838383;
-      --line: rgba(0, 0, 0, .12);
-      --line-soft: rgba(0, 0, 0, .06);
-      --shell: #e2eff8;
-      --panel: #f9f9f9;
-      --paper: #fff;
-      --blue: #6ea8e8;
-      --blue-dark: #4d7fbe;
-      --blue-soft: #eef7ff;
-      --blue-wash: #f8fbff;
-      --green: #6f8eae;
-      --green-soft: #f1f5f9;
-      --red: #8793a2;
-      --red-soft: #f4f5f7;
-      --duration: 220ms;
-      --speed: 1;
-      --presence-opacity: 0.055;
-      --rail-width: 2px;
-      --ease: cubic-bezier(0.32, 0.72, 0, 1);
-      --z-popover: 100;
-      --z-overlay: 200;
-      --z-harness: 400;
-      --hairline: 1px;
-    }
-    @media only screen and (min-device-pixel-ratio: 2),
-      only screen and (min-resolution: 192dpi) { :root { --hairline: .5px; } }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-width: 320px; min-height: 100%; }
-    body {
-      background: linear-gradient(180deg, rgba(232, 241, 250, .35), rgba(241, 244, 248, .35)), var(--shell);
-      color: var(--ink);
-      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-synthesis: none;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    button, a, input { touch-action: manipulation; }
-    button { font: inherit; }
-    button:focus-visible { outline: 2px solid oklch(0.32 0.01 260 / .7); outline-offset: 2px; }
-    ::selection { background: oklch(0.89 0.06 250); color: var(--ink); }
-
-    .app-shell {
-      width: min(1440px, calc(100vw - 48px));
-      height: min(958px, calc(100dvh - 48px));
-      min-height: 650px;
-      margin: 24px auto;
-      display: grid;
-      grid-template-columns: 260px minmax(590px, 1fr) 380px;
-      grid-template-rows: minmax(0, 1fr);
-      overflow: hidden;
-      border-radius: 24px;
-      background: var(--panel);
-      box-shadow:
-        0 0 0 .5px rgba(0, 0, 0, .04),
-        0 1px 4px rgba(0, 0, 0, .02),
-        0 4px 16px rgba(0, 0, 0, .04);
-      isolation: isolate;
-    }
-    .left-rail { display: flex; flex-direction: column; min-width: 0; background: rgba(249, 249, 249, .78); }
-    .brand { height: 52px; display: flex; align-items: center; gap: 8px; padding-inline: 18px; font-size: 14px; font-weight: 600; }
-    .brand-mark { width: 18px; height: 18px; border-radius: 5px; background: var(--ink); display: grid; place-items: center; color: white; font-size: 10px; }
-    .window-controls { display: flex; align-items: center; gap: 9px; padding: 1px; }
-    .traffic { width: 14px; height: 14px; border: .5px solid rgba(0,0,0,.1); border-radius: 50%; }
-    .traffic.close { background: #c7d0da; } .traffic.min { background: #d8dee6; } .traffic.zoom { background: #b5c5d6; }
-    .brand-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-    .brand-tool { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
-    .brand-tool img { width: 20px; height: 20px; }
-    .sidebar-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; height: 36px; margin: 12px 16px 8px; padding: 2px; border-radius: 999px; background: rgba(0, 0, 0, .05); }
-    .sidebar-tab { border: 0; border-radius: 32px; min-height: 32px; color: var(--ink-2); background: transparent; font-size: 14px; line-height: 20px; cursor: pointer; }
-    .sidebar-tab.is-active { color: var(--ink); background: var(--paper); box-shadow: 0 1px 2px oklch(0.3 0.01 250 / .08); }
-    .nav-group { display: grid; gap: 0; padding: 0 8px; }
-    .nav-label { padding: 12px 12px 4px; color: var(--ink-3); font-size: 14px; line-height: 20px; }
-    .nav-item { min-width: 0; min-height: 36px; padding: 4px 12px 4px 8px; display: flex; align-items: center; gap: 4px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-size: 14px; line-height: 20px; text-align: start; cursor: pointer; }
-    .nav-item.is-active { color: var(--ink); background: rgba(0, 0, 0, .05); border-radius: 8px; }
-    .nav-icon { width: 20px; height: 20px; flex: 0 0 auto; object-fit: contain; }
-    .workspace { margin-top: auto; height: 56px; padding-inline: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
-    .workspace-dot { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(145deg, #def2ff, #8fc8f4); box-shadow: inset 0 0 0 1px oklch(1 0 0 / .5); }
-
-    .editor { min-width: 0; background: var(--paper); box-shadow: inset var(--hairline) 0 var(--line), inset calc(-1 * var(--hairline)) 0 var(--line); }
-    .editor-toolbar { height: 52px; display: flex; align-items: center; gap: 10px; padding-inline: 16px; border-bottom: var(--hairline) solid var(--line-soft); color: var(--ink-2); font-size: 14px; }
-    .doc-type { display: flex; align-items: center; gap: 8px; }
-    .toolbar-spacer { flex: 1; }
-    .toolbar-action { min-height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); cursor: pointer; }
-    .toolbar-action:hover { background: oklch(0.96 0.006 250); }
-    .save { box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .1); background: var(--paper); color: var(--ink); }
-    .cover {
-      height: 200px;
-      position: relative;
-      overflow: hidden;
-      background: url("assets/dotwise-cover.jpg") center 47% / cover no-repeat;
-    }
-    .cover::after { content: none; }
-    .document { width: min(600px, calc(100% - 80px)); margin: 0 auto; padding: 50px 0 100px; }
-    .document h1 { margin: 0 0 14px; font-size: 32px; line-height: 40px; letter-spacing: -.025em; text-wrap: balance; }
-    .metadata { display: flex; align-items: center; gap: 5px; margin-bottom: 28px; color: var(--ink-3); font-size: 12px; line-height: 16px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.83 0.17 92); }
-    .document p, .document li { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 20px; }
-    .document p { margin: 0 0 20px; }
-    .document strong { font-family: Inter, ui-sans-serif, sans-serif; font-size: .92em; font-weight: 650; }
-    .document blockquote { margin: 24px 0 26px; padding: 2px 0 2px 16px; border-inline-start: 2px solid var(--ink); color: var(--ink-2); font-family: Inter, ui-sans-serif, sans-serif; font-size: 14px; font-style: italic; line-height: 20px; }
-    .document hr { border: 0; border-top: var(--hairline) solid var(--line); margin: 28px 0 18px; }
-    .document h2 { margin: 0 0 12px; font-size: 24px; line-height: 32px; letter-spacing: -.02em; text-wrap: balance; }
-    .document ul { margin: 14px 0; padding-left: 23px; }
-    .document li { margin: 7px 0; padding-left: 3px; }
-    .active-paragraph { position: relative; border-radius: 4px; }
-    .agent-range { position: absolute; inset: -8px -10px; z-index: -1; border-radius: 7px; pointer-events: none; }
-    .agent-range::before { content: ""; position: absolute; inset-block: 3px; inset-inline-start: 0; width: var(--rail-width); border-radius: 99px; background: var(--blue); }
-    .writing .agent-range, .range .agent-range { background: rgba(91, 131, 189, var(--presence-opacity)); animation: rangeIn var(--duration) var(--ease) both; }
-    .agent-caret-wrap { display: inline-flex; position: relative; width: 2px; height: 1em; vertical-align: -0.12em; margin-inline: 2px 0; z-index: 2; }
-    .agent-caret { width: 2px; height: 1.08em; border-radius: 1px; background: var(--blue); animation: caretBlink 1s steps(1, end) infinite; }
-    .agent-avatar { position: absolute; inset-inline-start: 6px; top: -3px; width: 18px; height: 18px; overflow: hidden; border-radius: 50%; background: linear-gradient(145deg, #def2ff 0%, #8fc8f4 46%, #5b9bdd 100%); box-shadow: inset 0 0 1px #fff, inset 0 0 3px rgba(255,255,255,.75), inset 0 0 7px rgba(67,128,190,.32), 0 0 0 2px var(--paper), 0 2px 5px rgba(77, 127, 190, .18); animation: avatarIn var(--duration) var(--ease) both; }
-    .agent-avatar::before { content: ""; position: absolute; left: -2px; right: -2px; top: 5px; height: 9px; border-radius: 99px; background: linear-gradient(90deg, #9ed3f7, #e3f4ff, #83bbed); filter: blur(3px); }
-    .agent-avatar::after { content: ""; position: absolute; left: 2px; right: 2px; top: 7px; height: 5px; border-radius: 99px; background: #e6f6ff; filter: blur(1.2px); mix-blend-mode: screen; box-shadow: inset 0 0 1px white, inset 0 0 3px rgba(255,255,255,.8); }
-    .agent-label { position: absolute; top: 22px; left: 6px; white-space: nowrap; padding: 5px 8px; border-radius: 5px; background: var(--blue-dark); color: white; font-family: Inter, sans-serif; font-size: 11px; font-style: normal; font-weight: 500; line-height: 14px; opacity: 0; transform: translateY(-2px); pointer-events: none; box-shadow: 0 2px 7px rgba(63, 98, 143, .18); transition: opacity 140ms ease-out, transform 140ms ease-out; }
-    .agent-caret-wrap:focus-within .agent-label { opacity: 1; transform: translateY(0); }
-
-    .inline-diff { display: inline; animation: diffIn var(--duration) var(--ease) both; }
-    .diff-old { color: #9aa1a8; text-decoration: line-through; text-decoration-color: #b8bec5; text-decoration-thickness: 1px; text-decoration-skip-ink: none; }
-    .diff-new { color: #3672b9; font-weight: 520; }
-    .edited-marker { position: absolute; right: -32px; top: 7px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid oklch(0.7 0.015 250); display: grid; place-items: center; background: var(--paper); color: var(--ink-3); font-family: Inter, sans-serif; font-size: 10px; }
-    .change-review-card { padding: 13px; border-radius: 10px; background: rgba(255,255,255,.82); box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 2px 7px rgba(38,65,95,.05); }
-    .change-review-head { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: var(--ink-2); font-size: 11px; }
-    .change-review-head .tiny-agent { width: 16px; height: 16px; margin: 0; vertical-align: 0; }
-    .change-review-head strong { color: var(--ink); font-size: 12px; font-weight: 600; }
-    .change-review-head time { margin-left: auto; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-    .change-review-copy { margin: 0; color: var(--ink-2); font-size: 12px; line-height: 18px; }
-    .change-review-copy s { color: #9aa1a8; text-decoration-color: #b8bec5; }
-    .change-review-copy em { color: #3672b9; font-style: normal; font-weight: 600; }
-
-    .task-panel { min-width: 0; min-height: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; background: var(--panel); }
-    .task-tabs { height: 56px; display: flex; align-items: center; gap: 5px; padding: 9px 12px; border-bottom: var(--hairline) solid var(--line-soft); }
-    .task-tab { min-height: 32px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; color: var(--ink-3); font-size: 14px; line-height: 20px; cursor: pointer; }
-    .task-tab.is-active { color: var(--ink); background: var(--paper); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .08), 0 1px 3px oklch(0.2 0.01 250 / .06); }
-    .tiny-agent, .mini-orb { position: relative; display: inline-block; overflow: hidden; width: 16px; height: 16px; margin-right: 5px; border-radius: 50%; vertical-align: -3px; background: linear-gradient(145deg, #def2ff 0%, #8fc8f4 46%, #5b9bdd 100%); box-shadow: inset 0 0 1px #fff, inset 0 0 3px rgba(255,255,255,.75), inset 0 0 5px rgba(67,128,190,.32); }
-    .tiny-agent::before, .mini-orb::before { content: ""; position: absolute; left: -2px; right: -2px; top: 5px; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #9ed3f7, #e3f4ff, #83bbed); filter: blur(3px); }
-    .tiny-agent::after, .mini-orb::after { content: ""; position: absolute; left: 2px; right: 2px; top: 7px; height: 4px; border-radius: 99px; background: #e6f6ff; filter: blur(1px); mix-blend-mode: screen; }
-    .mini-orb { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; box-shadow: inset 0 0 1px #fff, inset 0 0 2px #71abff, inset 0 0 4px #71abff, 0 0 0 1px rgba(255,255,255,.65); }
-    .task-body { min-height: 0; flex: 1; display: flex; flex-direction: column; }
-    .task-summary { padding: 18px 15px 14px; border-bottom: var(--hairline) solid var(--line); }
-    .task-title-row { display: flex; align-items: center; gap: 8px; }
-    .task-title { font-size: 15px; font-weight: 600; }
-    .task-state { margin-top: 9px; display: flex; align-items: center; justify-content: space-between; color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .task-log { flex: 1; min-height: 0; overflow: auto; padding: 16px 15px; font-family: Inter, ui-sans-serif, sans-serif; font-size: 14px; line-height: 20px; color: var(--ink-2); }
-    .task-log p { margin: 0 0 14px; }
-    .task-composer { height: 58px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: var(--hairline) solid var(--line); }
-    .composer-field { min-width: 0; flex: 1; color: var(--ink-3); font-size: 12px; }
-    .circle-button { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: background-color 130ms ease-out, transform 130ms ease-out; }
-    .circle-button.primary { width: 32px; height: 32px; min-width: 32px; background: var(--ink); color: white; }
-    .circle-button:active, .review-entry:active, .review-action:active { transform: scale(.96); }
-    .review-entry { width: calc(100% - 30px); min-height: 44px; margin: 0 15px 16px; padding: 0 12px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 9px; color: var(--ink); background: var(--paper); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .08), 0 2px 7px oklch(0.2 0.01 250 / .05); cursor: pointer; transition: box-shadow 150ms ease-out, transform 150ms ease-out; }
-    .review-count { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; }
-    .review-entry small { margin-left: auto; color: var(--ink-3); }
-    .live-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); }
-    .live-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: breathe 1.3s ease-in-out infinite; }
-
-    .suggest-paragraph { position: relative; z-index: 8; padding: 8px 10px; margin-inline: -10px; border-radius: 8px; background: transparent; box-shadow: none; }
-    .suggest-paragraph.is-scanning { isolation: isolate; }
-    .suggest-scan-overlay { position: absolute; inset: -1px; z-index: 0; padding: 1.5px; border-radius: 9px; --scan-angle: 210deg; background: conic-gradient(from var(--scan-angle), #b8a9ef, #7db8ed, #d1efff, #83b9ec, #b8a9ef); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .9; animation: scanBorderFlow 1.65s linear infinite; pointer-events: none; }
-    /* Suggest · Inward: one transparent-centered frame with a continuous perimeter flow. */
-    .suggest-paragraph.inward-scan .suggest-scan-overlay { overflow: hidden; padding: 1.5px; border-radius: 9px; --scan-angle: 210deg; background: conic-gradient(from var(--scan-angle), transparent 0deg, transparent 214deg, rgba(220,241,255,.22) 236deg, rgba(121,179,235,.92) 258deg, rgba(238,249,255,.96) 278deg, rgba(124,182,237,.6) 300deg, rgba(218,240,255,.18) 324deg, transparent 344deg, transparent 360deg), linear-gradient(rgba(136,185,234,.34), rgba(172,209,243,.34)); box-shadow: 0 0 0 1px rgba(132,182,243,.1), 0 0 14px rgba(142,193,246,.14); opacity: .94; animation: scanBorderFlow 2.8s linear infinite; will-change: --scan-angle; }
-    .suggest-paragraph.inward-scan .suggest-scan-overlay::before,
-    .suggest-paragraph.inward-scan .suggest-scan-overlay::after { content: none; }
-    .suggest-target { position: relative; }
-    /* One shared agent lane: targets compensate for their own text indentation. */
-    .suggest-edit-button { position: absolute; left: -42px; top: 9px; width: 20px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; box-shadow: none; transition: transform 140ms ease-out; }
-    .suggest-paragraph .suggest-edit-button { left: -32px; }
-    .suggest-list-target .suggest-edit-button { left: -65px; top: 0; }
-    .suggest-edit-button { animation: markerIn var(--duration) var(--ease) both; }
-    .suggest-edit-button::before { content: ""; position: absolute; inset: -12px; }
-    .suggest-edit-button .tiny-agent { width: 20px; height: 20px; margin: 0; vertical-align: 0; pointer-events: none; box-shadow: inset 0 0 1px #fff, inset 0 0 4px rgba(255,255,255,.8), inset 0 0 6px rgba(67,128,190,.3), 0 2px 6px rgba(77,127,190,.16); }
-    .suggest-edit-button:hover { transform: scale(1.05); }
-    .suggest-edit-button:active { transform: scale(.96); }
-    .suggest-edit-button:focus-visible, .suggest-choice:focus-visible { outline: 2px solid rgba(39,44,51,.46); outline-offset: 2px; }
-    .suggest-popover { position: absolute; left: 20px; top: 37px; z-index: 30; width: min(344px, calc(100vw - 80px)); padding: 12px 13px 14px; border-radius: 11px; background: rgba(255,255,255,.99); box-shadow: 0 0 0 1px rgba(23,30,38,.075), 0 2px 5px rgba(23,30,38,.035), 0 13px 32px rgba(38,65,95,.105); transform-origin: 0 0; animation: suggestIn 180ms var(--ease) both; }
-    .suggest-popover-head { min-height: 40px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--ink-3); font-size: 11px; line-height: 16px; }
-    .suggest-popover-head .tiny-agent { width: 19px; height: 19px; margin-right: 0; vertical-align: 0; }
-    .suggest-agent-name { color: var(--ink); font-size: 12px; font-weight: 600; }
-    .suggest-popover-head time { color: #969da5; font-variant-numeric: tabular-nums; }
-    .suggest-popover-actions { margin-inline-start: auto; display: flex; align-items: center; padding: 2px; border-radius: 8px; background: rgba(245,247,249,.8); box-shadow: inset 0 0 0 1px rgba(24,32,40,.055); }
-    .suggest-choice { position: relative; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #707780; cursor: pointer; transition: background-color 140ms ease-out, color 140ms ease-out, transform 140ms ease-out; touch-action: manipulation; }
-    .suggest-choice::before { content: ""; position: absolute; inset: -2px; }
-    .suggest-choice + .suggest-choice { box-shadow: inset 1px 0 0 rgba(24,32,40,.06); }
-    .suggest-choice svg { width: 15px; height: 15px; stroke-width: 1.55; }
-    .suggest-choice:active { transform: scale(.96); }
-    .suggest-diff { position: relative; margin: 0; padding: 3px 2px 3px 13px; color: var(--ink-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
-    .suggest-diff::before { content: ""; position: absolute; inset-block: 1px; inset-inline-start: 0; width: 1.5px; border-radius: 99px; background: rgba(115,153,194,.28); }
-    .suggest-diff del { color: #989fa7; text-decoration-color: rgba(105,112,120,.55); text-decoration-thickness: 1px; }
-    .suggest-diff ins { margin-inline-start: 4px; color: #4779ad; font-weight: 500; text-decoration: none; }
-    .suggest-diff-arrow { margin-inline: 4px 1px; color: #a3aab1; font-size: 11px; }
-    .suggest-diff-add ins { margin-inline-start: 0; }
-    .suggest-diff-delete::before { background: rgba(141,148,156,.25); }
-    .suggest-op-glyph { display: inline-grid; width: 16px; margin-inline-end: 5px; place-items: center; color: #5e8fbe; font-size: 14px; font-weight: 500; }
-    .suggest-diff-delete .suggest-op-glyph { color: #8d949c; }
-    .suggest-added { color: #4779ad; }
-    .suggest-side-intro { margin-bottom: 18px !important; color: var(--ink-2); }
-    .suggest-list { display: grid; gap: 8px; }
-    .suggest-list-item { width: 100%; display: grid; grid-template-columns: 16px minmax(0,1fr); gap: 8px; padding: 9px 10px; border: 0; border-radius: 8px; background: rgba(255,255,255,.72); box-shadow: inset 0 0 0 1px rgba(0,0,0,.055); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 140ms ease-out, box-shadow 140ms ease-out, opacity 140ms ease-out; }
-    .suggest-list-item.is-active { background: var(--blue-soft); box-shadow: inset 0 0 0 1px rgba(110,168,232,.22); }
-    .suggest-list-item.is-resolved { opacity: .52; cursor: default; }
-    .suggest-list-item:focus-visible { outline: 2px solid rgba(39,44,51,.42); outline-offset: 2px; }
-    .suggest-list-index { color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .suggest-list-item strong { display: block; margin-bottom: 2px; color: var(--ink); font-size: 12px; line-height: 16px; }
-    .suggest-list-item span:last-child { color: var(--ink-3); font-size: 11px; line-height: 15px; }
-
-    .live-edit-block { position: relative; z-index: 7; margin: 0 0 22px; }
-    .live-edit-copy { margin: 0 !important; padding: 10px 11px; border-radius: 8px; color: #3f73aa; background: rgba(238,247,255,.72); box-shadow: inset 0 0 0 1px rgba(110,168,232,.12); }
-    .live-edit-block.is-editing .live-edit-copy { animation: editWash 2.4s linear both; }
-    .live-edit-block.is-editing .flow-edit-copy { position: relative; isolation: isolate; overflow: hidden; color: #3f73aa; background: transparent; box-shadow: none; animation: none; }
-    .flow-edit-copy::before { content: ""; position: absolute; inset: -74% -15%; z-index: 0; border-radius: 45%; background: radial-gradient(ellipse at center, transparent 0%, transparent 34%, rgba(206,232,255,.06) 41%, rgba(157,204,246,.17) 49%, rgba(105,170,231,.3) 57%, rgba(150,200,244,.15) 66%, rgba(211,234,253,.04) 75%, transparent 84%); filter: blur(4px); transform: scale(1.18); transform-origin: center; will-change: transform, opacity; animation: editFlowRibbon 2.4s cubic-bezier(.32,.72,0,1) both; pointer-events: none; }
-    .flow-edit-text { position: relative; z-index: 1; }
-    .live-edit-control { position: relative; width: min(100%, 420px); min-height: 46px; margin-top: 7px; border-radius: 10px; background: rgba(255,255,255,.98); box-shadow: 0 0 0 1px rgba(0,0,0,.065), 0 2px 5px rgba(0,0,0,.045), 0 10px 26px rgba(38,65,95,.1); overflow: hidden; }
-    .live-edit-status { min-height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 13px; color: var(--ink-2); font-size: 12px; }
-    .live-edit-status .tiny-agent { width: 15px; height: 15px; margin: 0; vertical-align: 0; }
-    .editing-dots { display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 1px; }
-    .editing-dots i { width: 3px; height: 3px; border-radius: 50%; background: #7daee1; animation: editDot 900ms ease-in-out infinite; }
-    .editing-dots i:nth-child(2) { animation-delay: 140ms; }
-    .editing-dots i:nth-child(3) { animation-delay: 280ms; }
-    .live-edit-progress { position: absolute; inset-inline: 0; bottom: 0; height: 2px; background: #dceeff; overflow: hidden; }
-    .live-edit-progress::after { content: ""; display: block; width: 36%; height: 100%; border-radius: 99px; background: linear-gradient(90deg, transparent, #75abe2, transparent); animation: editProgress 1.25s var(--ease) infinite; }
-    .inserted-copy { margin-top: 8px !important; padding-inline-start: 11px; border-inline-start: 2px solid rgba(110,168,232,.45); color: #3f73aa; }
-    .live-side-step { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--ink-3); font-size: 11px; }
-    .live-side-step::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
-    .live-side-step.is-done::before { box-shadow: inset 0 0 0 2px var(--blue); background: white; }
-
-    /* Direction 4 — editor action menu. */
-    .menu-edit-block { position: relative; z-index: 7; margin: 0 0 92px; }
-    .menu-edit-copy { margin: 0 !important; padding: 10px 11px; border-radius: 8px; color: #3f73aa; background: rgba(238,247,255,.72); box-shadow: inset 0 0 0 1px rgba(110,168,232,.12); }
-    .menu-edit-block.is-editing .menu-edit-copy { animation: editWash 2.4s linear both; }
-    .menu-assistant-bar { position: relative; width: min(100%, 536px); min-height: 46px; margin-top: 8px; display: flex; align-items: center; gap: 9px; padding: 5px 8px 5px 11px; border-radius: 10px; background: rgba(255,255,255,.98); box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 2px 5px rgba(0,0,0,.04), 0 10px 24px rgba(38,65,95,.09); }
-    .menu-assistant-bar .tiny-agent { width: 17px; height: 17px; margin: 0; flex: 0 0 auto; }
-    .menu-placeholder { min-width: 0; flex: 1; color: #9ba2aa; font-size: 12px; }
-    .menu-scope { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); font-size: 10px; white-space: nowrap; }
-    .menu-scope::after { content: "⌄"; font-size: 12px; line-height: 1; }
-    .menu-utility { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #9ba2aa; font-size: 14px; cursor: pointer; }
-    .menu-utility:focus-visible, .menu-action:focus-visible { outline: 2px solid rgba(70,112,158,.42); outline-offset: 2px; }
-    .menu-send { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #e8edf2; color: #9ba2aa; font-size: 13px; }
-    .menu-editing { color: #5e87b5; }
-    .menu-action-popover { position: absolute; top: calc(100% + 7px); left: 0; z-index: 12; width: 214px; padding: 5px; border-radius: 9px; background: rgba(255,255,255,.99); box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 3px 9px rgba(0,0,0,.06), 0 16px 34px rgba(38,65,95,.12); transform-origin: top left; animation: suggestIn 170ms var(--ease) both; }
-    .menu-action { width: 100%; min-height: 34px; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; align-items: center; gap: 7px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-2); font-size: 12px; text-align: left; cursor: pointer; transition: background-color 130ms ease-out, color 130ms ease-out, transform 130ms ease-out; }
-    .menu-action-icon { color: #6f7d8b; font-size: 16px; line-height: 1; text-align: center; }
-    .menu-retry-icon { display: grid; place-items: center; }
-    .menu-retry-icon svg { width: 16px; height: 16px; }
-    .menu-action kbd { color: #a4abb2; font-family: inherit; font-size: 10px; }
-    .menu-action:active { transform: scale(.98); }
-    /* Direction 1 — Figma Teamwork presence, mapped to Dotwise. */
-    [data-variant="quiet"] .task-log { color: var(--ink-3); }
-    [data-variant="quiet"] .active-paragraph { z-index: 0; }
-    [data-variant="quiet"] .diff-old, [data-variant="quiet"] .diff-new { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-    [data-variant="quiet"] .writing .agent-range,
-    [data-variant="quiet"] .range .agent-range { inset: 0; background: transparent; box-shadow: none; animation: none; }
-    [data-variant="quiet"] .agent-range::before { content: none; }
-    [data-variant="quiet"] .agent-label { top: -4px; left: 28px; }
-    [data-variant="quiet"] .agent-typed { color: var(--blue-dark); background: transparent; padding: 0; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-    [data-variant="quiet"] .writing .agent-avatar { animation: agentAvatarSpin 2.2s linear infinite; }
-    .teamwork-cursor { position: absolute; right: 8px; top: -13px; display: flex; align-items: center; z-index: 3; filter: drop-shadow(0 2px 4px rgba(77, 127, 190, .14)); }
-    .cursor-arrow { width: 0; height: 0; margin-right: -2px; margin-top: 16px; border-top: 8px solid transparent; border-bottom: 3px solid transparent; border-right: 11px solid var(--blue); transform: rotate(25deg); }
-    .cursor-label { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--blue); }
-    .cursor-label .mini-orb { margin: 0; }
-    .teamwork-cursor::after { content: attr(data-agent-name); position: absolute; top: -2px; left: 28px; white-space: nowrap; padding: 5px 8px; border-radius: 5px; background: var(--blue-dark); color: white; font: 500 11px/14px Inter, ui-sans-serif, sans-serif; opacity: 0; transform: translateY(-2px); pointer-events: none; box-shadow: 0 2px 7px rgba(63, 98, 143, .18); transition: opacity 140ms ease-out, transform 140ms ease-out; }
-    .teamwork-cursor:focus-visible::after { opacity: 1; transform: translateY(0); }
-
-    /* Direction 2 — change evidence stays visible and navigable. */
-    [data-variant="review"] .agent-range::before { background: var(--blue); }
-    [data-variant="review"] .writing .agent-range, [data-variant="review"] .range .agent-range { background: var(--blue-soft); }
-    .change-card { display: flex; gap: 9px; padding: 10px; margin-bottom: 7px; border-radius: 8px; background: var(--paper); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .07); font-family: Inter, sans-serif; font-size: 11px; line-height: 1.4; color: var(--ink-2); cursor: pointer; }
-    .change-card-dot { width: 7px; height: 7px; margin-top: 4px; flex: 0 0 auto; border-radius: 50%; background: var(--blue); }
-    .change-card strong { display: block; color: var(--ink); font-size: 11px; }
-
-    /* Direction 3 — task identity is explicitly bound to the paragraph. */
-    [data-variant="bound"] .agent-range { inset-inline-end: -22px; }
-    [data-variant="bound"] .agent-range::after { content: "Write a diary"; position: absolute; right: -112px; top: -20px; padding: 5px 8px 5px 22px; border-radius: 999px; background: var(--paper); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .09), 0 4px 10px oklch(0.25 0.02 250 / .08); color: var(--ink-2); font: 10px/1 Inter, sans-serif; white-space: nowrap; }
-    [data-variant="bound"] .agent-range .binding-dot { position: absolute; right: -105px; top: -16px; z-index: 1; width: 12px; height: 12px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 2px var(--paper); }
-    [data-variant="bound"] .task-summary { background: linear-gradient(90deg, var(--blue-wash), transparent 88%); }
-    [data-variant="bound"] .task-title-row::after { content: "Located"; margin-left: auto; padding: 4px 6px; border-radius: 5px; background: var(--blue-soft); color: var(--blue-dark); font-size: 10px; font-weight: 600; }
-
-    .review-overlay { position: fixed; inset: 0; z-index: var(--z-overlay); display: grid; place-items: center; padding: 24px; background: oklch(0.22 0.016 258 / .24); backdrop-filter: blur(3px); animation: fadeIn var(--duration) var(--ease) both; }
-    .review-sheet { width: min(580px, calc(100vw - 32px)); max-height: min(660px, calc(100dvh - 48px)); overflow: auto; border-radius: 16px; background: var(--paper); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .07), 0 24px 70px oklch(0.24 0.02 258 / .22); animation: sheetIn var(--duration) var(--ease) both; }
-    .review-header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: var(--hairline) solid var(--line); background: oklch(0.995 0.002 255 / .94); backdrop-filter: blur(12px); }
-    .review-header h2 { margin: 0; font-size: 16px; }
-    .review-header span { color: var(--ink-3); font-size: 12px; }
-    .review-close { margin-left: auto; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-    .review-list { display: grid; gap: 12px; padding: 18px 20px; }
-    .review-item { padding: 14px; border-radius: 10px; background: oklch(0.975 0.006 250); box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .06); }
-    .review-item-label { margin-bottom: 10px; color: var(--ink-3); font-size: 11px; }
-    .review-item p { margin: 0; font-family: ui-serif, Georgia, serif; font-size: 15px; line-height: 1.55; }
-    .review-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: var(--hairline) solid var(--line); background: oklch(0.995 0.002 255 / .94); backdrop-filter: blur(12px); }
-    .review-action { min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; transition: background-color 150ms ease-out, transform 150ms ease-out; }
-    .review-action.secondary { background: oklch(0.95 0.006 250); color: var(--ink); }
-    .review-action.primary { background: var(--ink); color: white; }
-
-    .proto-picker {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2147483647;
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      padding: 4px;
-      border-radius: 999px;
-      background: rgba(10, 10, 10, 0.82);
-      -webkit-backdrop-filter: blur(12px) saturate(1.4);
-      backdrop-filter: blur(12px) saturate(1.4);
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-        0 8px 24px rgba(0, 0, 0, 0.24),
-        0 2px 6px rgba(0, 0, 0, 0.12);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 13px;
-      line-height: 1;
-      -webkit-font-smoothing: antialiased;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .proto-picker-item { position: relative; display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; cursor: pointer; transition: background-color 150ms ease-out, transform 150ms ease-out; }
-    .proto-picker-item:hover { color: rgba(255, 255, 255, 0.85); }
-    .proto-picker-item.is-active { background: rgba(255, 255, 255, 0.2); color: #fff; }
-    .proto-picker-item:active { transform: scale(0.97); }
-    .proto-picker-item:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.4); outline-offset: 2px; }
-    .teamwork-dot { width: 7px; height: 7px; border-radius: 50%; background: #7fa7d2; box-shadow: 0 0 0 1px rgba(255,255,255,.28), inset 0 0 2px #d6e8fb; }
-    .proto-picker-item[data-playing] .teamwork-dot { animation: breathe 1.1s ease-in-out infinite; }
-    .proto-picker[data-position="top"] { bottom: auto; top: 24px; }
-
-    @keyframes rangeIn { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes avatarIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
-    @keyframes agentAvatarSpin { to { transform: rotate(360deg); } }
-    @keyframes diffIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes caretBlink { 0%, 48% { opacity: 1; } 49%, 100% { opacity: .2; } }
-    @keyframes breathe { 0%, 100% { opacity: .45; transform: scale(.9); } 50% { opacity: 1; transform: scale(1); } }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes sheetIn { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes suggestIn { from { opacity: 0; transform: translateY(-3px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes editDot { 0%, 100% { opacity: .28; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-1px); } }
-    @keyframes editProgress { from { transform: translateX(-110%); } to { transform: translateX(310%); } }
-    @keyframes editWash { 0% { background: rgba(238,247,255,.35); } 45% { background: rgba(229,243,255,.9); } 100% { background: rgba(238,247,255,.72); } }
-    @keyframes editFlowRibbon { 0% { opacity: 0; transform: scale(1.18); } 12% { opacity: .92; } 68% { opacity: .78; } 100% { opacity: 0; transform: scale(.56); } }
-    @property --scan-angle { syntax: "<angle>"; inherits: false; initial-value: 210deg; }
-    @keyframes scanBorderFlow { from { --scan-angle: 210deg; } to { --scan-angle: 570deg; } }
-    @keyframes inwardOuterRing { 0% { opacity: 0; transform: scale(1.06); } 12% { opacity: .7; } 56% { opacity: .36; transform: scale(1); } 72%, 100% { opacity: 0; transform: scale(.985); } }
-    @keyframes inwardMiddleRing { 0%, 14% { opacity: 0; transform: scale(1.08); } 28% { opacity: .72; } 66% { opacity: .35; transform: scale(1); } 82%, 100% { opacity: 0; transform: scale(.985); } }
-    @keyframes inwardFinalLine { 0%, 22% { opacity: .22; } 45% { opacity: 1; } 73% { opacity: .68; } 100% { opacity: .22; } }
-    @keyframes markerIn { from { opacity: 0; transform: translateX(3px) scale(.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
-    @media (hover: hover) and (pointer: fine) {
-      .nav-item:hover, .toolbar-action:hover, .circle-button:hover { background: oklch(0.93 0.008 248); }
-      .agent-caret-wrap:hover .agent-label, .teamwork-cursor:hover::after { opacity: 1; transform: translateY(0); }
-      .suggest-choice:hover { background: rgba(225,229,233,.72); color: #262b31; }
-      .review-entry:hover { box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .1), 0 4px 13px oklch(0.2 0.01 250 / .08); }
-      .live-action:hover { background: #f2f5f8; color: var(--ink); }
-      .live-action.primary:hover { background: #4477b4; color: white; }
-      .menu-action:hover, .menu-utility:hover { background: #f2f5f8; color: var(--ink); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
-    }
-    @media (max-width: 1000px) {
-      .app-shell { width: calc(100vw - 28px); grid-template-columns: 170px minmax(500px, 1fr); }
-      .task-panel { position: absolute; right: 14px; top: 70px; bottom: 70px; width: 310px; z-index: 5; border-radius: 14px; box-shadow: 0 0 0 1px oklch(0.2 0.01 250 / .08), 0 16px 40px oklch(0.2 0.01 250 / .15); }
-    }
-    @media (max-width: 740px) {
-      .app-shell { margin: 14px auto 78px; height: calc(100dvh - 106px); min-height: 590px; grid-template-columns: 1fr; border-radius: 14px; }
-      .left-rail { display: none; }
-      .task-panel { top: auto; left: 22px; right: 22px; bottom: 14px; width: auto; height: 268px; }
-      .task-log { display: none; }
-      .live-decision-head { padding-right: 3px; }
-      .live-action { padding-inline: 6px; font-size: 10px; }
-      .menu-assistant-bar { width: 100%; }
-      .cover { height: 128px; }
-      .document { width: calc(100% - 44px); padding-top: 30px; }
-      .document h1 { font-size: 29px; }
-      .document p, .document li { font-size: 16px; }
-      .proto-picker-item { padding: 0 9px; font-size: 11px; }
-    }
-  </style>
+  <meta name="theme-color" content="#eef7f7" />
+  <title>Dotwise — Document Agent</title>
+  <link rel="icon" href="assets/figma/agent-document.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main id="stage" aria-live="polite"></main>
+  <main class="app-shell" aria-label="Dotwise document workspace">
+    <div class="ambient-gradient" aria-hidden="true"></div>
 
-  <nav class="proto-picker" aria-label="Choose prototype">
-    <button class="proto-picker-item is-active" id="teamworkPlay" aria-label="Play Teamwork prototype"><span class="teamwork-dot" aria-hidden="true"></span><span>Teamwork</span></button>
-    <button class="proto-picker-item" id="suggestInwardPlay" aria-label="Play Suggest inward prototype"><span class="teamwork-dot" aria-hidden="true"></span><span>Suggest · Inward</span></button>
-    <button class="proto-picker-item" id="actionMenuPlay" aria-label="Play Action menu prototype"><span class="teamwork-dot" aria-hidden="true"></span><span>Action menu</span></button>
-    <button class="proto-picker-item" id="actionFlowPlay" aria-label="Play flowing gradient prototype"><span class="teamwork-dot" aria-hidden="true"></span><span>Action · Flow</span></button>
-  </nav>
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <header class="sidebar-titlebar">
+        <div class="traffic-lights" aria-label="Window controls">
+          <span class="traffic-light close"></span>
+          <span class="traffic-light minimize"></span>
+          <span class="traffic-light zoom"></span>
+        </div>
+        <div class="sidebar-tools">
+          <button class="icon-button" aria-label="Search"><img src="assets/figma/search.svg" alt="" /></button>
+          <button class="icon-button" aria-label="Collapse sidebar"><img src="assets/figma/panel-right.svg" alt="" /></button>
+        </div>
+      </header>
 
-  <script>
-    const ICONS = {
-      note: '<img class="nav-icon" src="assets/note.svg" alt="" />',
-      canvas: '<img class="nav-icon" src="assets/canvas.svg" alt="" />',
-      terminal: '<img class="nav-icon" src="assets/terminal.svg" alt="" />',
-      browser: '<img class="nav-icon" src="assets/browser.svg" alt="" />',
-      chat: '<img class="nav-icon" src="assets/chat.svg" alt="" />',
-      group: '<img class="nav-icon" src="assets/group.svg" alt="" />'
-    };
+      <nav class="workspace-tabs" aria-label="Workspace sections">
+        <button>File</button>
+        <button class="active">Task</button>
+        <button>Inbox</button>
+      </nav>
 
-    const teamwork = { key: 'quiet', name: 'Teamwork', descriptor: 'Editing this selection', side: 'quiet' };
-    const requestedPrototype = new URLSearchParams(location.search).get('prototype');
-    let prototypeMode = ['suggest-inward', 'actionmenu', 'actionmenu-flow'].includes(requestedPrototype) ? requestedPrototype : 'teamwork';
-    const states = ['writing', 'diff', 'done'];
-    let stateIndex = 0;
-    let autoTimer = null;
-    let reviewOpen = false;
-    let suggestionOutcomes = [null, null, null];
-    let activeSuggestion = 0;
-    let suggestPhase = 'scan';
-    let menuEditState = 'editing';
-    function isSuggestPrototype() { return prototypeMode === 'suggest-inward'; }
-    function isActionMenuPrototype() { return prototypeMode === 'actionmenu' || prototypeMode === 'actionmenu-flow'; }
+      <div class="sidebar-scroll">
+        <section class="nav-section">
+          <div class="nav-heading">Pinned</div>
+          <button class="nav-item"><img src="assets/figma/file.svg" alt="" /><span>Note</span></button>
+          <button class="nav-item"><img src="assets/figma/presentation.svg" alt="" /><span>Canvas</span></button>
+        </section>
 
-    function actionMenuText() {
-      const original = 'Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question.';
-      const revised = 'Ideas rarely arrive fully formed. They begin as fragments—a sentence, an image, a question—and become useful once they have somewhere to go.';
-      const tail = ' A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.';
-      const bar = '<div class="menu-assistant-bar"><span class="tiny-agent" aria-hidden="true"></span><span class="menu-placeholder">Ask Gradient anything…</span><span class="menu-scope">In this page</span><button class="menu-utility" aria-label="Add context">@</button><button class="menu-send" aria-label="Send">↑</button></div>';
-      if (menuEditState === 'editing') {
-        const copy = prototypeMode === 'actionmenu-flow'
-          ? '<p class="live-edit-copy flow-edit-copy"><span class="flow-edit-text">' + revised + tail + '</span></p>'
-          : '<p class="live-edit-copy">' + revised + tail + '</p>';
-        return '<div class="live-edit-block is-editing">' + copy + '<div class="live-edit-control"><div class="live-edit-status"><span class="tiny-agent" aria-hidden="true"></span><span>Editing</span><span class="editing-dots" aria-hidden="true"><i></i><i></i><i></i></span></div><span class="live-edit-progress" aria-hidden="true"></span></div></div>';
-      }
-      if (menuEditState === 'discarded') return '<p>' + original + tail + '</p><div class="menu-edit-block">' + bar + '</div>';
-      if (menuEditState === 'inserted') return '<p>' + original + '</p><div class="menu-edit-block"><p class="inserted-copy">' + revised + '</p>' + bar + '</div>';
-      if (menuEditState === 'accepted') return '<div class="menu-edit-block"><p class="menu-edit-copy">' + revised + tail + '</p>' + bar + '</div>';
-      const status = bar + '<div class="menu-action-popover" role="menu" aria-label="Review edit"><button class="menu-action" id="menuAccept" role="menuitem"><span class="menu-action-icon">✓</span><span>Accept</span><kbd>Enter</kbd></button><button class="menu-action" id="menuDiscard" role="menuitem"><span class="menu-action-icon">×</span><span>Discard</span><kbd>Esc</kbd></button><button class="menu-action" id="menuInsert" role="menuitem"><span class="menu-action-icon">↳</span><span>Insert below</span></button><button class="menu-action" id="menuRetry" role="menuitem"><span class="menu-action-icon menu-retry-icon"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 6.5A5.25 5.25 0 1 0 13.25 9" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><path d="M13 2.75v3.8H9.2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Try again</span></button></div>';
-      return '<div class="menu-edit-block ' + (menuEditState === 'editing' ? 'is-editing' : 'is-ready') + '"><p class="menu-edit-copy">' + revised + tail + '</p>' + status + '</div>';
-    }
+        <section class="nav-section task-nav">
+          <div class="nav-heading"><span>Task</span><span aria-hidden="true">+</span></div>
+          <button class="nav-item"><img src="assets/figma/presentation.svg" alt="" /><span>Canvas</span></button>
+          <button class="nav-item"><img src="assets/figma/terminal.svg" alt="" /><span>Terminal</span></button>
+          <button class="nav-item"><img src="assets/figma/folder.svg" alt="" /><span>Group</span></button>
+          <button class="nav-item figma-item"><span class="figma-mark">F</span><span>Figma</span></button>
+          <button class="nav-item"><img src="assets/figma/file.svg" alt="" /><span>hiiiii</span></button>
+          <button class="nav-item active"><img src="assets/figma/file.svg" alt="" /><span>From Dots to Direction</span></button>
+          <button class="nav-item"><img src="assets/figma/compass.svg" alt="" /><span>Browser</span></button>
+          <button class="nav-item"><img src="assets/figma/bot.svg" alt="" /><span>Chat</span></button>
+        </section>
+      </div>
 
-    function suggestionMarker(index, label) {
-      if (suggestPhase === 'scan' || suggestionOutcomes[index]) return '';
-      return '<button class="suggest-edit-button" id="suggestEdit' + index + '" data-suggestion="' + index + '" aria-label="Review ' + label + ' suggestion" aria-expanded="' + (activeSuggestion === index && suggestPhase === 'review') + '"><span class="tiny-agent" aria-hidden="true"></span></button>';
-    }
+      <footer class="workspace-identity">
+        <span class="workspace-avatar" aria-hidden="true"></span>
+        <span>Stella’s workspace</span>
+      </footer>
+    </aside>
 
-    function suggestText() {
-      if (suggestionOutcomes[0] === 'accepted') {
-        return '<p class="suggest-paragraph">Ideas rarely arrive <strong>fully formed</strong>. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.</p>';
-      }
-      if (suggestionOutcomes[0] === 'dismissed') {
-        return '<p class="suggest-paragraph">Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.</p>';
-      }
-      if (suggestPhase === 'scan') {
-        const scanClass = prototypeMode === 'suggest-inward' ? ' inward-scan' : '';
-        return '<p class="suggest-paragraph is-scanning' + scanClass + '"><span class="suggest-scan-overlay" aria-hidden="true"></span>Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.</p>';
-      }
-      return '<p class="suggest-paragraph">' + suggestionMarker(0, 'replace') + 'Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.</p>';
-    }
+    <section class="content-shell" aria-label="Workspace and agent container" data-node-id="1702:76232">
+      <section class="document-workspace" aria-label="Document editor">
+        <header class="document-toolbar">
+          <div class="document-name"><img src="assets/figma/file.svg" alt="" />From Dots to Direction</div>
+          <div class="toolbar-actions">
+            <button class="save-button">Save to file</button>
+            <button class="icon-button chevron" aria-label="More save options"><img src="assets/figma/chevron-down.svg" alt="" /></button>
+          </div>
+        </header>
 
-    function suggestCaptureText() {
-      const original = 'The best capture system is deliberately incomplete. Save the fragment before your brain turns it into a polished story; context can come later.';
-      if (suggestionOutcomes[1] === 'accepted') return '<p class="suggest-target">' + original + ' <span class="suggest-added">Give every fragment a place to land before deciding what it means.</span></p>';
-      if (suggestionOutcomes[1] === 'dismissed') return '<p>' + original + '</p>';
-      return '<p class="suggest-target">' + suggestionMarker(1, 'add') + original + '</p>';
-    }
+        <div class="document-scroller" id="documentSurface" tabindex="0">
+          <div class="cover" role="img" aria-label="Abstract blue cover image"></div>
+          <article class="document-page" id="documentPage" contenteditable="true" spellcheck="true" role="textbox" aria-label="Editable document" aria-multiline="true">
+            <h1>From Dots to Direction</h1>
+            <p class="metadata">Last updated: August 2026 · Assigned to @DesignTeam · <span class="review-dot"></span> Under review</p>
+            <p class="sr-only" id="reviewStatus" aria-live="polite" contenteditable="false"></p>
 
-    function suggestListText() {
-      const third = suggestionOutcomes[2] === 'accepted' ? '' : '<li class="suggest-target suggest-list-target">' + (suggestionOutcomes[2] === 'dismissed' ? '' : suggestionMarker(2, 'delete')) + 'An image that changes how you see the problem</li>';
-      return '<ul><li>A sentence you do not want to lose</li><li>A question that keeps returning</li>' + third + '</ul>';
-    }
+            <div class="intro-body">
+              <div class="ai-copy-row" id="aiCopyRow">
+                <p class="selectable-copy" id="selectableCopy"><span id="aiCopyBase">Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question, or a comment from a meeting that keeps echoing after everyone has left. </span><span class="t-stream" id="aiCopyContinuation">A useful note helps you capture the signal, connect it to context, and turn it into a next move. It keeps enough texture to make the thought recognizable later, while leaving enough space for new connections to change its meaning. Over time, those small connections become a direction you can act on.</span></p>
+              </div>
 
-    function suggestTaskState() {
-      if (suggestPhase === 'scan') return '<span class="live-pill"><span class="live-pulse"></span>Reviewing selection</span><span>1 of 3</span>';
-      if (suggestPhase === 'marker') return '<span>Suggestions found</span><span>3 edits</span>';
-      const pending = suggestionOutcomes.filter(outcome => !outcome).length;
-      if (!pending) return '<span>Review complete</span><span>3 of 3</span>';
-      return '<span>Ready to review</span><span>' + pending + ' remaining</span>';
-    }
-
-    function caret() {
-      return '<span class="agent-caret-wrap" tabindex="0" aria-label="Gradient Agent is writing here"><span class="agent-caret"></span><span class="agent-avatar" aria-hidden="true"></span><span class="agent-label">Gradient · writing</span></span>';
-    }
-    function activeText(state, variant) {
-      let sentence;
-      if (state === 'diff') {
-        sentence = 'Ideas rarely arrive <span class="inline-diff"><span class="diff-old">as finished arguments</span> <span class="diff-new">fully formed</span></span>. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.';
-      } else if (state === 'writing') {
-        const typed = variant === 'quiet' ? '<span class="agent-typed"><strong>next mo</strong></span>' : '<strong>next mo</strong>';
-        sentence = 'Ideas rarely arrive fully formed. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a ' + typed + caret();
-      } else {
-        sentence = 'Ideas rarely arrive fully formed. They show up as fragments: a sentence, an image, a question. A useful note helps you <strong>capture the signal</strong>, <em>connect it to context</em>, and turn it into a <strong>next move</strong>.';
-      }
-      const marker = state === 'done' && variant === 'review' ? '<button class="edited-marker" aria-label="View this edit">✓</button>' : '';
-      const teamworkCursor = variant === 'quiet' && state === 'range' ? '<span class="teamwork-cursor" tabindex="0" data-agent-name="Gradient · editing" aria-label="Gradient Agent cursor"><span class="cursor-arrow"></span><span class="cursor-label"><span class="mini-orb" aria-hidden="true"></span></span></span>' : '';
-      const binding = variant === 'bound' && (state === 'writing' || state === 'range') ? '<span class="binding-dot" aria-hidden="true"></span>' : teamworkCursor;
-      const range = state === 'writing' || state === 'range' ? '<span class="agent-range" aria-hidden="true">' + binding + '</span>' : '';
-      return '<p class="active-paragraph ' + state + '">' + range + sentence + marker + '</p>';
-    }
-    function sideContent(variant, state) {
-      if (prototypeMode === 'teamwork' && state === 'diff') {
-        return '<div class="change-review-card"><div class="change-review-head"><span class="tiny-agent" aria-hidden="true"></span><strong>Gradient Agent</strong><time>Just now</time></div><p class="change-review-copy">Replace <s>“as finished arguments”</s> with <em>“fully formed”</em>.</p></div>';
-      }
-      if (isActionMenuPrototype()) {
-        const editState = menuEditState;
-        return '<p class="suggest-side-intro">Gradient is rewriting the opening directly in the document. Review the result when the edit finishes.</p><div class="live-side-step ' + (editState !== 'editing' ? 'is-done' : '') + '">Generate a clearer opening</div><div class="live-side-step ' + (['accepted','discarded','inserted'].includes(editState) ? 'is-done' : '') + '">Wait for your decision</div>';
-      }
-      if (prototypeMode === 'suggest-inward') {
-        const items = [
-          ['Opening paragraph', 'Replace phrase'],
-          ['Capture the dots', 'Add a transition'],
-          ['Capture list', 'Remove one point']
-        ];
-        return '<p class="suggest-side-intro">Gradient reviewed the document and left three suggestions. Select an edit marker in the document to decide.</p><div class="suggest-list">' + items.map((item, index) => {
-          const resolved = suggestionOutcomes[index];
-          const status = resolved === 'accepted' ? '✓' : resolved === 'dismissed' ? '×' : String(index + 1);
-          return '<button class="suggest-list-item' + (activeSuggestion === index && !resolved ? ' is-active' : '') + (resolved ? ' is-resolved' : '') + '" data-suggestion="' + index + '" ' + (resolved ? 'disabled' : '') + ' aria-label="Review ' + item[1] + '"><span class="suggest-list-index">' + status + '</span><span><strong>' + item[0] + '</strong><span>' + item[1] + '</span></span></button>';
-        }).join('') + '</div>';
-      }
-      if (variant.side === 'changes') {
-        return '<div class="change-card"><span class="change-card-dot"></span><span><strong>Opening paragraph</strong>Improved clarity and rhythm</span></div><div class="change-card"><span class="change-card-dot"></span><span><strong>Capture the dots</strong>Removed repeated phrasing</span></div><div class="change-card"><span class="change-card-dot"></span><span><strong>Conclusion</strong>Strengthened the final transition</span></div>';
-      }
-      if (state === 'done') {
-        return '<p>The diary is ready. I tightened the opening, made the seasonal details more concrete, and kept the original voice.</p><p>No ideas were added beyond the source note.</p>';
-      }
-      return '<p><strong>Tuesday, 26 August 2026: Sunny turning cloudy</strong></p><p>There’s a hint of coolness in the air today. Although the sun is still blazing, the breeze that blew in at dusk no longer felt as stifling and clammy as it did in the height of summer.</p><p>As I set out this morning, I noticed a few leaves on the gingko tree downstairs had begun to turn yellow.</p>';
-    }
-    function stateLabel(state, variant) {
-      if (state === 'writing') return '<span class="live-pill"><span class="live-pulse"></span>Writing</span><span>1m 47s</span>';
-      if (state === 'range') return '<span class="live-pill"><span class="live-pulse"></span>' + variant.descriptor + '</span><span>2 of 4</span>';
-      if (state === 'diff') return '<span>Change captured</span><span>3 of 4</span>';
-      return '<span>Finished just now</span><span>4 changes</span>';
-    }
-    function render(variant, state) {
-      return `
-        <section class="app-shell" data-variant="${variant.key}" data-state="${state}" data-prototype="${prototypeMode}">
-          <aside class="left-rail" aria-label="Workspace navigation">
-            <div class="brand"><span class="window-controls" aria-label="Window controls"><span class="traffic close"></span><span class="traffic min"></span><span class="traffic zoom"></span></span><span class="brand-tools"><button class="brand-tool" aria-label="Search"><img src="assets/search.svg" alt="" /></button><button class="brand-tool" aria-label="Toggle sidebar">◫</button></span></div>
-            <div class="sidebar-tabs"><button class="sidebar-tab">File</button><button class="sidebar-tab is-active">Task</button><button class="sidebar-tab">Inbox</button></div>
-            <nav class="nav-group">
-              <span class="nav-label">File</span>
-              <button class="nav-item">${ICONS.note}Note</button><button class="nav-item">${ICONS.canvas}Canvas</button>
-              <span class="nav-label">Task</span>
-              <button class="nav-item">${ICONS.canvas}Canvas</button><button class="nav-item">${ICONS.terminal}Terminal</button><button class="nav-item is-active">${ICONS.note}Note</button><button class="nav-item">${ICONS.browser}Browser</button><button class="nav-item">${ICONS.chat}Chat</button><button class="nav-item">${ICONS.group}Group</button>
-            </nav>
-            <div class="workspace"><span class="workspace-dot"></span>Stella’s workspace</div>
-          </aside>
-          <article class="editor">
-            <div class="editor-toolbar"><span class="doc-type">${ICONS.note}Note</span><span class="toolbar-spacer"></span><button class="toolbar-action save">Save to file</button><button class="toolbar-action" aria-label="More document actions">•••</button></div>
-            <div class="cover" role="img" aria-label="Soft blue and cream abstract cover image"></div>
-            <div class="document">
-              <h1>From Dots to Direction</h1>
-              <div class="metadata">Last updated: August 2026 · Assigned to @DesignTeam · <span class="status-dot"></span>Under review</div>
-              ${isSuggestPrototype() ? suggestText() : isActionMenuPrototype() ? actionMenuText() : activeText(state, variant.key)}
-              <blockquote>“A useful note does not preserve a thought. It gives the thought somewhere to go.”</blockquote>
+              <blockquote id="reviewTargetQuote">“A useful note does not preserve a thought. It gives the thought somewhere to go.”</blockquote>
               <hr />
-              <h2>1. Capture the dots</h2>
-              ${isSuggestPrototype() ? suggestCaptureText() : '<p>The best capture system is deliberately incomplete. Save the fragment before your brain turns it into a polished story; context can come later.</p>'}
-              ${isSuggestPrototype() ? suggestListText() : '<ul><li>A sentence you do not want to lose</li><li>A question that keeps returning</li><li>An image that changes how you see the problem</li></ul>'}
             </div>
+
+            <section class="document-section">
+              <h2 id="reviewTargetHeading">1. Capture the dots</h2>
+              <p id="reviewTargetLead">The best capture system is deliberately incomplete. Save the fragment before your brain turns it into a polished story; context can come later.</p>
+              <ul>
+                <li>A sentence you do not want to lose</li>
+                <li>A question that keeps returning</li>
+                <li>An image that changes how you see the problem</li>
+              </ul>
+              <div class="gallery" aria-label="Document image gallery">
+                <figure><div class="gallery-image image-one"></div><figcaption>Notice the fragment</figcaption></figure>
+                <figure><div class="gallery-image image-two"></div><figcaption>Give it a handle</figcaption></figure>
+                <figure><div class="gallery-image image-three"></div><figcaption>Find its next edge</figcaption></figure>
+              </div>
+            </section>
+
+            <section class="document-section">
+              <h2>2. Connect what keeps returning</h2>
+              <p>A single note is useful, but a pattern of notes is revealing. Revisit the fragments that continue to feel unfinished and look for the questions, tensions, or images they share. The goal is not to force them into one conclusion; it is to notice where they begin to pull in the same direction.</p>
+              <p>Give each connection a short sentence that explains why it matters now. This turns a loose archive into a working surface—one that can support a decision, a draft, or a conversation without erasing the uncertainty that made the idea interesting.</p>
+            </section>
+
+            <section class="document-section">
+              <h2>3. Turn direction into a next move</h2>
+              <p>Direction becomes useful when it changes what happens next. End a note with a small action: ask one person, sketch one variation, collect one missing example, or schedule ten minutes to test the assumption. A next move should be specific enough to begin and light enough to revise.</p>
+              <p>The document does not need to predict the finished answer. It only needs to preserve the signal, show the path between ideas, and make the next thoughtful step easier to see.</p>
+            </section>
+
+            <section class="document-section subagent-diary-section" id="subagentDiarySection" hidden>
+              <h2>A note from today</h2>
+              <p id="subagentDiaryCopy"></p>
+            </section>
           </article>
-          <aside class="task-panel" aria-label="Agent task panel">
-            <div class="task-tabs"><button class="task-tab">Plan a week</button><button class="task-tab is-active"><span class="tiny-agent"></span>${isSuggestPrototype() ? 'Suggest edits' : isActionMenuPrototype() ? 'Rewrite opening' : 'Write a diary'}</button><button class="task-tab" aria-label="New task">＋</button></div>
-            <div class="task-body">
-              <div class="task-summary"><div class="task-title-row"><span class="tiny-agent"></span><span class="task-title">${isSuggestPrototype() ? 'Suggest edits' : isActionMenuPrototype() ? 'Rewrite opening' : 'Write a diary'}</span></div><div class="task-state">${isSuggestPrototype() ? suggestTaskState() : isActionMenuPrototype() ? menuEditState === 'editing' ? '<span class="live-pill"><span class="live-pulse"></span>Editing document</span><span>In progress</span>' : menuEditState === 'ready' ? '<span>Action menu ready</span><span>1 edit</span>' : '<span>Decision saved</span><span>Complete</span>' : stateLabel(state, variant)}</div></div>
-              <div class="task-log">${sideContent(variant, state)}</div>
-              ${prototypeMode === 'teamwork' && state === 'done' ? '<button class="review-entry" id="reviewEntry"><span class="tiny-agent"></span><span class="review-count">4 changes · Review</span><small>→</small></button>' : ''}
-              <div class="task-composer"><button class="circle-button" aria-label="Attach file">＋</button><div class="composer-field">Ask Gradient to refine another section…</div><button class="circle-button primary" aria-label="Send task">↑</button></div>
-            </div>
-          </aside>
-        </section>`;
-    }
-    function openReview() {
-      reviewOpen = true;
-      document.body.insertAdjacentHTML('beforeend', `<div class="review-overlay" id="reviewOverlay" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
-        <section class="review-sheet"><header class="review-header"><span class="tiny-agent"></span><h2 id="reviewTitle">Review changes</h2><span>4 edits</span><button class="review-close" id="reviewClose" aria-label="Close review">×</button></header>
-        <div class="review-list"><article class="review-item"><div class="review-item-label">Opening paragraph · Clarity</div><p>Ideas rarely arrive <span class="diff-old">as finished arguments</span> <span class="diff-new">fully formed</span>.</p></article><article class="review-item"><div class="review-item-label">Opening paragraph · Rhythm</div><p>A useful note helps you capture the signal, connect it to context, and turn it into a next move.</p></article><article class="review-item"><div class="review-item-label">Section 1 · Concision</div><p>Save the fragment before your brain turns it into a polished story; context can come later.</p></article></div>
-        <footer class="review-footer"><button class="review-action secondary" id="reviewClose2">Keep editing</button><button class="review-action primary" id="acceptAll">Accept all</button></footer></section></div>`);
-      const close = () => { document.getElementById('reviewOverlay')?.remove(); reviewOpen = false; document.getElementById('reviewEntry')?.focus(); };
-      document.getElementById('reviewClose').onclick = close;
-      document.getElementById('reviewClose2').onclick = close;
-      document.getElementById('acceptAll').onclick = () => { close(); const entry = document.getElementById('reviewEntry'); if (entry) entry.querySelector('.review-count').textContent = 'All changes accepted'; };
-      document.getElementById('reviewClose').focus();
-    }
-    function mount(state = states[stateIndex]) {
-      clearTimeout(autoTimer);
-      stage.innerHTML = render(teamwork, state);
-      document.getElementById('reviewEntry')?.addEventListener('click', openReview);
-      document.querySelectorAll('.suggest-edit-button, .suggest-list-item[data-suggestion]').forEach(control => {
-        control.addEventListener('click', () => {
-          const index = Number(control.dataset.suggestion);
-          if (document.getElementById('suggestPopover') && activeSuggestion === index) closeSuggestPopover();
-          else {
-            activeSuggestion = index;
-            mount('writing');
-            document.getElementById('suggestEdit' + index)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          }
-        });
-      });
-      if (isSuggestPrototype() && suggestPhase === 'review' && !suggestionOutcomes[activeSuggestion]) openSuggestPopover(false, activeSuggestion);
-      document.getElementById('menuAccept')?.addEventListener('click', () => finishMenuEdit('accepted'));
-      document.getElementById('menuDiscard')?.addEventListener('click', () => finishMenuEdit('discarded'));
-      document.getElementById('menuInsert')?.addEventListener('click', () => finishMenuEdit('inserted'));
-      document.getElementById('menuRetry')?.addEventListener('click', () => playActionMenuSequence(prototypeMode));
-      if (isActionMenuPrototype() && menuEditState === 'editing') {
-        autoTimer = setTimeout(() => {
-          menuEditState = 'ready';
-          mount('writing');
-          (prototypeMode === 'actionmenu-flow' ? actionFlowPlay : actionMenuPlay).removeAttribute('data-playing');
-          updateUrl();
-        }, 2400);
-      }
-    }
-    function finishMenuEdit(outcome) {
-      menuEditState = outcome;
-      mount('writing');
-      updateUrl();
-    }
-    function closeSuggestPopover(returnFocus = true) {
-      document.getElementById('suggestPopover')?.remove();
-      const anchor = document.getElementById('suggestEdit' + activeSuggestion);
-      anchor?.setAttribute('aria-expanded', 'false');
-      if (returnFocus) anchor?.focus();
-    }
-    function openSuggestPopover(moveFocus = true, index = activeSuggestion) {
-      document.getElementById('suggestPopover')?.remove();
-      const anchor = document.getElementById('suggestEdit' + index);
-      if (!anchor) return;
-      const suggestion = [
-        {
-          label: 'replace',
-          content: '<p class="suggest-diff"><del>as finished arguments</del><span class="suggest-diff-arrow" aria-hidden="true">→</span><ins>fully formed</ins></p>'
-        },
-        {
-          label: 'add',
-          content: '<p class="suggest-diff suggest-diff-add"><span class="suggest-op-glyph" aria-hidden="true">+</span><ins>Give every fragment a place to land before deciding what it means.</ins></p>'
-        },
-        {
-          label: 'delete',
-          content: '<p class="suggest-diff suggest-diff-delete"><span class="suggest-op-glyph" aria-hidden="true">−</span><del>An image that changes how you see the problem</del></p>'
-        }
-      ][index];
-      anchor.setAttribute('aria-expanded', 'true');
-      anchor.insertAdjacentHTML('afterend', `<aside class="suggest-popover" id="suggestPopover" role="dialog" aria-label="Gradient Agent ${suggestion.label} suggestion">
-        <div class="suggest-popover-head">
-          <span class="tiny-agent" aria-hidden="true"></span>
-          <span class="suggest-agent-name">Gradient Agent</span>
-          <time>Just now</time>
-          <div class="suggest-popover-actions" aria-label="Suggestion actions">
-            <button class="suggest-choice yes" id="suggestYes" aria-label="Accept suggestion" title="Accept">
-              <svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m4.2 9.3 3.1 3.1 6.5-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <form class="prompt-box prompt-box-main" id="mainPrompt" hidden>
+          <img class="prompt-agent-icon" src="assets/figma/agent-document.svg" alt="" />
+          <input id="mainPromptInput" type="text" autocomplete="off" placeholder="Edit with AI" aria-label="Ask the document agent" />
+          <button class="prompt-submit" type="submit" aria-label="Send prompt" disabled><img src="assets/figma/arrow-up.svg" alt="" /></button>
+        </form>
+
+        <form class="prompt-box prompt-box-light" id="selectionPrompt" hidden>
+          <img class="prompt-agent-icon" src="assets/figma/selection-prompt-icon.svg" alt="" />
+          <input id="selectionPromptInput" type="text" autocomplete="off" placeholder="Edit selection with AI" aria-label="Ask AI to edit selected text" />
+          <button class="prompt-submit dark" type="submit" aria-label="Send edit request"><img src="assets/figma/selection-prompt-send.svg" alt="" /></button>
+        </form>
+
+        <div class="selection-review" id="selectionReview" hidden role="status">
+          <div class="selection-review-message">
+            <img class="prompt-agent-icon" src="assets/figma/selection-confirm-icon.svg" alt="" />
+            <span class="selection-review-copy" id="selectionReviewCopy">I've finished updating the content.</span>
+          </div>
+          <div class="selection-review-actions">
+            <button class="review-chat" type="button" aria-label="Continue in chat">
+              <img src="assets/figma/selection-chat.svg" alt="" />
+              <span>Chat</span>
             </button>
-            <button class="suggest-choice no" id="suggestNo" aria-label="Dismiss suggestion" title="Dismiss">
-              <svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m5 5 8 8M13 5l-8 8" stroke="currentColor" stroke-linecap="round"/></svg>
-            </button>
+            <img class="selection-review-divider" src="assets/figma/selection-confirm-divider.svg" alt="" />
+            <button class="review-icon" id="revertSelection" type="button" aria-label="Undo AI edit"><img src="assets/figma/selection-undo.svg" alt="" /></button>
+            <button class="review-confirm" id="confirmSelection" type="button" aria-label="Accept AI edit"><img src="assets/figma/selection-accept.svg" alt="" /></button>
           </div>
         </div>
-        ${suggestion.content}
-      </aside>`);
-      const finishSuggestion = outcome => {
-        suggestionOutcomes[index] = outcome;
-        const next = [1, 2, 3].map(offset => (index + offset) % 3).find(candidate => !suggestionOutcomes[candidate]);
-        if (next !== undefined) activeSuggestion = next;
-        mount('writing');
-        if (next !== undefined) document.getElementById('suggestEdit' + next)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        updateUrl();
-      };
-      document.getElementById('suggestNo').onclick = () => finishSuggestion('dismissed');
-      document.getElementById('suggestYes').onclick = () => finishSuggestion('accepted');
-      if (moveFocus) document.getElementById('suggestYes').focus();
-    }
-    function playSequence() {
-      clearTimeout(autoTimer);
-      prototypeMode = 'teamwork';
-      teamworkPlay.classList.add('is-active');
-      suggestInwardPlay.classList.remove('is-active');
-      actionMenuPlay.classList.remove('is-active');
-      actionFlowPlay.classList.remove('is-active');
-      suggestInwardPlay.removeAttribute('data-playing');
-      actionMenuPlay.removeAttribute('data-playing');
-      actionFlowPlay.removeAttribute('data-playing');
-      teamworkPlay.setAttribute('data-playing', '');
-      stateIndex = 0;
-      suggestionOutcomes = [null, null, null];
-      activeSuggestion = 0;
-      mount();
-      updateUrl();
-      const delays = [1700, 2100];
-      const advance = () => {
-        stateIndex += 1;
-        if (stateIndex < states.length) {
-          mount();
-          updateUrl();
-          if (stateIndex < states.length - 1) autoTimer = setTimeout(advance, delays[stateIndex]);
-          else teamworkPlay.removeAttribute('data-playing');
-        }
-      };
-      autoTimer = setTimeout(advance, delays[0]);
-    }
 
-    function playSuggestInwardSequence() {
-      clearTimeout(autoTimer);
-      prototypeMode = 'suggest-inward';
-      suggestInwardPlay.classList.add('is-active');
-      teamworkPlay.classList.remove('is-active');
-      actionMenuPlay.classList.remove('is-active');
-      actionFlowPlay.classList.remove('is-active');
-      teamworkPlay.removeAttribute('data-playing');
-      actionMenuPlay.removeAttribute('data-playing');
-      actionFlowPlay.removeAttribute('data-playing');
-      suggestInwardPlay.setAttribute('data-playing', '');
-      suggestionOutcomes = [null, null, null];
-      activeSuggestion = 0;
-      suggestPhase = 'scan';
-      stateIndex = 0;
-      mount('writing');
-      updateUrl();
-      autoTimer = setTimeout(() => {
-        suggestPhase = 'marker';
-        mount('writing');
-        autoTimer = setTimeout(() => {
-          suggestPhase = 'review';
-          mount('writing');
-          suggestInwardPlay.removeAttribute('data-playing');
-          updateUrl();
-        }, 700);
-      }, 1050);
-    }
+      </section>
 
-    function playActionMenuSequence(mode = 'actionmenu') {
-      clearTimeout(autoTimer);
-      prototypeMode = mode;
-      actionMenuPlay.classList.toggle('is-active', mode === 'actionmenu');
-      actionFlowPlay.classList.toggle('is-active', mode === 'actionmenu-flow');
-      teamworkPlay.classList.remove('is-active');
-      suggestInwardPlay.classList.remove('is-active');
-      teamworkPlay.removeAttribute('data-playing');
-      suggestInwardPlay.removeAttribute('data-playing');
-      actionMenuPlay.removeAttribute('data-playing');
-      actionFlowPlay.removeAttribute('data-playing');
-      (mode === 'actionmenu-flow' ? actionFlowPlay : actionMenuPlay).setAttribute('data-playing', '');
-      menuEditState = 'editing';
-      stateIndex = 0;
-      mount('writing');
-      updateUrl();
-    }
+      <aside class="agent-panel" aria-label="Agent panel">
+        <header class="agent-header">
+          <div class="agent-tabs" role="tablist" aria-label="Agent views">
+            <button class="subagent-menu-trigger" id="subagentEntry" type="button" aria-label="Open subagent menu" aria-expanded="false" aria-controls="subagentMenu">
+              <span class="todo-icon" aria-hidden="true">
+                <img src="assets/figma/agent-list-row.svg" alt="" />
+                <img src="assets/figma/agent-list-row.svg" alt="" />
+              </span>
+            </button>
+            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
+            <button class="agent-workspace-tab subagent-tab-label" id="subagentPanelTab" type="button" role="tab" aria-selected="false" aria-controls="subagentPopover" tabindex="-1" hidden>Subagent</button>
+            <span class="agent-count" id="agentCount" hidden>0</span>
+          </div>
+          <div class="agent-actions">
+            <button class="split-action" aria-label="New conversation"><img src="assets/figma/agent-message-plus.svg" alt="" /><img src="assets/figma/agent-chevron.svg" alt="" /></button>
+            <button class="icon-button" aria-label="Expand panel"><img src="assets/figma/agent-expand.svg" alt="" /></button>
+            <button class="icon-button" aria-label="Collapse agent panel"><img src="assets/figma/agent-panel-left.svg" alt="" /></button>
+          </div>
+        </header>
 
-    const stage = document.getElementById('stage');
-    const teamworkPlay = document.getElementById('teamworkPlay');
-    const actionMenuPlay = document.getElementById('actionMenuPlay');
-    const actionFlowPlay = document.getElementById('actionFlowPlay');
-    const suggestInwardPlay = document.getElementById('suggestInwardPlay');
-    function updateUrl() { const url = new URL(location); url.searchParams.delete('v'); url.searchParams.set('state', states[stateIndex]); if (['suggest-inward', 'actionmenu', 'actionmenu-flow'].includes(prototypeMode)) url.searchParams.set('prototype', prototypeMode); else url.searchParams.delete('prototype'); history.replaceState(null, '', url); }
-    teamworkPlay.addEventListener('click', playSequence);
-    suggestInwardPlay.addEventListener('click', playSuggestInwardSequence);
-    actionMenuPlay.addEventListener('click', () => playActionMenuSequence('actionmenu'));
-    actionFlowPlay.addEventListener('click', () => playActionMenuSequence('actionmenu-flow'));
-    document.addEventListener('keydown', (e) => {
-      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'Escape' && reviewOpen) document.getElementById('reviewClose')?.click();
-      else if (e.key === 'Escape' && document.getElementById('suggestPopover')) closeSuggestPopover();
-      if (e.key === 'r' || e.key === 'R') prototypeMode === 'suggest-inward' ? playSuggestInwardSequence() : isActionMenuPrototype() ? playActionMenuSequence(prototypeMode) : playSequence();
-    });
+        <div class="agent-conversation" id="agentConversation" role="tabpanel" aria-labelledby="mainAgentTab">
+          <section class="review-chat-block" id="reviewChatBlock" aria-live="polite" hidden></section>
+        </div>
 
-    teamworkPlay.classList.toggle('is-active', prototypeMode === 'teamwork');
-    suggestInwardPlay.classList.toggle('is-active', prototypeMode === 'suggest-inward');
-    actionMenuPlay.classList.toggle('is-active', prototypeMode === 'actionmenu');
-    actionFlowPlay.classList.toggle('is-active', prototypeMode === 'actionmenu-flow');
-    const params = new URLSearchParams(location.search);
-    stateIndex = Math.max(0, states.indexOf(params.get('state')));
-    if (prototypeMode === 'suggest-inward') playSuggestInwardSequence();
-    else if (isActionMenuPrototype()) playActionMenuSequence(prototypeMode);
-    else playSequence();
-  </script>
+        <section class="subagent-popover" id="subagentPopover" hidden role="tabpanel" aria-labelledby="subagentPanelTab">
+          <div class="subagent-list-view" id="subagentListView">
+            <div class="subagent-list-scroll">
+              <section class="status-section" aria-labelledby="activeSubagentHeading">
+                <div class="status-heading" id="activeSubagentHeading">Active · <span id="activeCount">0</span></div>
+                <div class="subagent-task-list" id="activeTaskList"></div>
+                <div class="empty-status" id="emptyActive">No active subagents</div>
+              </section>
+              <section class="status-section" aria-labelledby="doneSubagentHeading">
+                <div class="status-heading" id="doneSubagentHeading">Done · <span id="doneCount">0</span></div>
+                <div class="subagent-task-list" id="doneTaskList"></div>
+                <div class="empty-status" id="emptyDone">No completed subagents</div>
+              </section>
+            </div>
+          </div>
+
+          <article class="subagent-detail-view" id="subagentDetailView" hidden aria-live="polite">
+            <header class="subagent-detail-header">
+              <button class="subagent-back" id="subagentBack" type="button" aria-label="Back to all subagents">
+                <img src="assets/figma/chevron-down.svg" alt="" />
+              </button>
+              <div id="subagentDetailIdentity"></div>
+              <button class="subagent-close" id="closeSubagentDetail" type="button" aria-label="Close subagent workspace" hidden>
+                <img src="assets/figma/review-close.svg" alt="" />
+              </button>
+            </header>
+            <button class="subagent-runtime" id="subagentRuntime" type="button">Working for 0s <span aria-hidden="true">›</span></button>
+            <div class="subagent-detail-content" id="subagentDetailContent"></div>
+          </article>
+        </section>
+
+        <section class="ai-suggestion-card" id="reviewSuggestionCard" aria-label="AI review suggestions" data-node-id="1718:84718" hidden>
+          <div class="ai-suggestion-copy">
+            <div class="ai-suggestion-header">
+              <img src="assets/figma/review-suggestion.svg" alt="" />
+              <strong>Suggestion</strong>
+              <span class="ai-suggestion-count" id="reviewSuggestionCount">3</span>
+            </div>
+            <p id="reviewSuggestionCopy">You've received 3 suggestions from Dotwise.</p>
+          </div>
+          <div class="ai-suggestion-controls">
+            <button class="send-all-review" id="sendAllReview" type="button">Send all</button>
+            <button class="close-review-suggestion" id="closeReviewSuggestion" type="button" aria-label="Close suggestions">
+              <img src="assets/figma/review-close.svg" alt="" />
+            </button>
+          </div>
+        </section>
+
+        <form class="composer" id="chatComposer">
+          <div class="file-chip">
+            <span class="agent-file-icon" aria-hidden="true"><img src="assets/figma/agent-file-base.svg" alt="" /><img src="assets/figma/agent-file-text.svg" alt="" /></span>
+            <span>From Dots to Direction</span>
+          </div>
+          <textarea aria-label="Message agent" placeholder="Ask anything"></textarea>
+          <div class="composer-actions">
+            <button class="add-button" type="button" aria-label="Add attachment"><img src="assets/figma/agent-add.svg" alt="" /></button>
+            <div class="model-select"><img src="assets/figma/agent-claude.svg" alt="" /><span>Claude</span><img src="assets/figma/agent-model-chevron.svg" alt="" /></div>
+            <button class="composer-send" type="submit" aria-label="Send message"><img src="assets/figma/agent-send.svg" alt="" /></button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="subagent-menu" id="subagentMenu" hidden aria-label="Subagent menu" data-node-id="1709:83803">
+        <div class="subagent-menu-heading">
+          <span class="subagent-menu-dot" aria-hidden="true"></span>
+          <span>Active · <strong id="subagentMenuActiveCount">0</strong></span>
+        </div>
+        <div class="subagent-menu-list" id="subagentMenuActiveList"></div>
+        <div class="subagent-menu-empty" id="subagentMenuEmptyActive">No active subagents</div>
+        <div class="subagent-menu-divider" aria-hidden="true"></div>
+        <div class="subagent-menu-heading subagent-menu-heading-done">
+          <span>Done · <strong id="subagentMenuDoneCount">0</strong></span>
+        </div>
+        <div class="subagent-menu-list" id="subagentMenuDoneList"></div>
+        <div class="subagent-menu-empty" id="subagentMenuEmptyDone">No completed subagents</div>
+      </section>
+
+    </section>
+  </main>
+
+  <div class="interaction-guide" id="interactionGuide" role="status">
+    <span><kbd>Space</kbd> summon agent</span>
+    <span>Select text to edit</span>
+    <span>Type and press <kbd>Tab</kbd></span>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="app.js"></script>
+  <script src="working-logo.bundle.js"></script>
 </body>
 </html>

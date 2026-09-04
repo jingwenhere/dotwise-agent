@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="lucide/compass" clip-path="url(#clip0_0_1088)">
+<g id="Vector">
+<path d="M7.99922 14.6659C11.6811 14.6659 14.6659 11.6811 14.6659 7.99922C14.6659 4.31732 11.6811 1.33255 7.99922 1.33255C4.31732 1.33255 1.33255 4.31732 1.33255 7.99922C1.33255 11.6811 4.31732 14.6659 7.99922 14.6659Z" stroke="black" stroke-width="1.0772" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10.8259 5.17255L9.62322 8.77989C9.55776 8.97627 9.44748 9.15472 9.3011 9.3011C9.15472 9.44748 8.97627 9.55776 8.77989 9.62322L5.17255 10.8259L6.37522 7.21855C6.44067 7.02216 6.55096 6.84371 6.69734 6.69734C6.84371 6.55096 7.02216 6.44067 7.21855 6.37522L10.8259 5.17255Z" stroke="black" stroke-width="1.0772" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_1088">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>
