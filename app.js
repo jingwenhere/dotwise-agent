@@ -68,6 +68,8 @@
   let selectionAnchor = null;
   let selectionRequest = '';
   let selectionPromptEngaged = false;
+  let documentSelectionPointerActive = false;
+  let documentSelectionKeyboardActive = false;
   let selectionReviewPositionFrame = 0;
   let selectionRun = 0;
   let toastTimer = null;
@@ -1282,6 +1284,11 @@
     positionFloating(selectionPrompt, rect, 375);
   }
 
+  function scheduleSelectionDetection(delay = 140) {
+    window.clearTimeout(detectSelection.timer);
+    detectSelection.timer = window.setTimeout(detectSelection, delay);
+  }
+
   function unwrapMarker() {
     if (!selectionMarker) return;
     if (selectionMarker.matches('.agent-selection') && selectionMarker.parentNode) {
@@ -1300,10 +1307,24 @@
       storedRange.surroundContents(marker);
       return marker;
     } catch (error) {
-      const anchor = storedRange.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? storedRange.commonAncestorContainer
-        : storedRange.commonAncestorContainer.parentElement;
-      const fallback = anchor?.closest('p, blockquote, li');
+      const startElement = storedRange.startContainer.nodeType === Node.ELEMENT_NODE
+        ? storedRange.startContainer
+        : storedRange.startContainer.parentElement;
+      const endElement = storedRange.endContainer.nodeType === Node.ELEMENT_NODE
+        ? storedRange.endContainer
+        : storedRange.endContainer.parentElement;
+      const startBlock = startElement?.closest('p, blockquote, li, h1, h2');
+      const endBlock = endElement?.closest('p, blockquote, li, h1, h2');
+      if (startBlock && startBlock === endBlock) {
+        try {
+          marker.append(storedRange.extractContents());
+          storedRange.insertNode(marker);
+          return marker;
+        } catch (rangeError) {
+          // Fall back to block highlighting when the browser cannot extract the range.
+        }
+      }
+      const fallback = startBlock;
       if (fallback && documentPage.contains(fallback)) {
         fallback.classList.add('agent-selection');
         fallback.classList.toggle('is-working', isWorking);
@@ -1546,6 +1567,10 @@
   }
 
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Shift' && (event.target === documentPage || documentPage.contains(event.target))) {
+      documentSelectionKeyboardActive = true;
+    }
+
     if (event.key === 'Escape') {
       if (!mainPrompt.hidden) closeMainPrompt();
       if (!selectionPrompt.hidden) {
@@ -1608,8 +1633,14 @@
   revertSelection.addEventListener('click', revertSelectionEdit);
 
   document.addEventListener('selectionchange', () => {
-    window.clearTimeout(detectSelection.timer);
-    detectSelection.timer = window.setTimeout(detectSelection, 30);
+    if (documentSelectionPointerActive || documentSelectionKeyboardActive) return;
+    scheduleSelectionDetection();
+  });
+
+  document.addEventListener('keyup', (event) => {
+    if (event.key !== 'Shift' || !documentSelectionKeyboardActive) return;
+    documentSelectionKeyboardActive = false;
+    scheduleSelectionDetection(0);
   });
 
   sendAllReview.addEventListener('click', sendReviewSuggestionsToChat);
@@ -1618,9 +1649,19 @@
     reviewStatus.textContent = `${reviewRemaining} review suggestions are waiting.`;
   });
 
-  documentPage.addEventListener('pointerdown', () => {
+  documentPage.addEventListener('pointerdown', (event) => {
+    if (event.isPrimary) documentSelectionPointerActive = true;
     removeTabSuggestion();
   });
+
+  const finishDocumentSelection = () => {
+    if (!documentSelectionPointerActive) return;
+    documentSelectionPointerActive = false;
+    scheduleSelectionDetection(0);
+  };
+
+  document.addEventListener('pointerup', finishDocumentSelection, true);
+  document.addEventListener('pointercancel', finishDocumentSelection, true);
 
   documentPage.addEventListener('beforeinput', () => {
     removeTabSuggestion();
