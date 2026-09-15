@@ -62,8 +62,8 @@
         <header class="document-toolbar">
           <div class="document-name"><img src="assets/figma/file.svg" alt="" />From Dots to Direction</div>
           <div class="toolbar-actions">
-            <button class="save-button">Save to file</button>
-            <button class="icon-button chevron" aria-label="More save options"><img src="assets/figma/chevron-down.svg" alt="" /></button>
+            <button class="icon-button workspace-header-action" type="button" aria-label="Save to file"><img src="assets/figma/workspace-download.svg" alt="" /></button>
+            <button class="icon-button workspace-header-action" type="button" aria-label="More document actions"><img src="assets/figma/workspace-more.svg" alt="" /></button>
           </div>
         </header>
 
@@ -119,8 +119,10 @@
 
         <form class="prompt-box prompt-box-main" id="mainPrompt" hidden>
           <img class="prompt-agent-icon" src="assets/figma/agent-document.svg" alt="" />
-          <input id="mainPromptInput" type="text" autocomplete="off" placeholder="Edit with AI" aria-label="Ask the document agent" />
-          <button class="prompt-submit" type="submit" aria-label="Send prompt" disabled><img src="assets/figma/arrow-up.svg" alt="" /></button>
+          <div class="prompt-main-field">
+            <input id="mainPromptInput" type="text" autocomplete="off" placeholder="Ask AI to write or search" aria-label="Ask the document agent" />
+            <button class="prompt-submit" type="submit" aria-label="Send prompt" disabled><img src="assets/figma/arrow-up.svg" alt="" /></button>
+          </div>
         </form>
 
         <form class="prompt-box prompt-box-light" id="selectionPrompt" hidden>
@@ -135,11 +137,6 @@
             <span class="selection-review-copy" id="selectionReviewCopy">I've finished updating the content.</span>
           </div>
           <div class="selection-review-actions">
-            <button class="review-chat" type="button" aria-label="Continue in chat">
-              <img src="assets/figma/selection-chat.svg" alt="" />
-              <span>Chat</span>
-            </button>
-            <img class="selection-review-divider" src="assets/figma/selection-confirm-divider.svg" alt="" />
             <button class="review-icon" id="revertSelection" type="button" aria-label="Undo AI edit"><img src="assets/figma/selection-undo.svg" alt="" /></button>
             <button class="review-confirm" id="confirmSelection" type="button" aria-label="Accept AI edit"><img src="assets/figma/ai-block-check.svg" alt="" /></button>
           </div>
@@ -150,24 +147,25 @@
       <aside class="agent-panel" aria-label="Agent panel">
         <header class="agent-header">
           <div class="agent-tabs" role="tablist" aria-label="Agent views">
-            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
             <button class="subagent-menu-trigger" id="subagentEntry" type="button" aria-label="Open subagent menu" aria-expanded="false" aria-controls="subagentMenu">
               <span class="todo-icon" aria-hidden="true">
                 <img src="assets/figma/agent-list-row.svg" alt="" />
                 <img src="assets/figma/agent-list-row.svg" alt="" />
               </span>
             </button>
+            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
             <button class="agent-workspace-tab subagent-tab-label" id="subagentPanelTab" type="button" role="tab" aria-selected="false" aria-controls="subagentPopover" tabindex="-1" hidden>Subagent</button>
             <span class="agent-count" id="agentCount" hidden>0</span>
           </div>
           <div class="agent-actions">
-            <button class="split-action" aria-label="New conversation"><img src="assets/figma/agent-message-plus.svg" alt="" /><img src="assets/figma/agent-chevron.svg" alt="" /></button>
+            <button class="agent-new-action" type="button" aria-label="New conversation"><img src="assets/figma/agent-message-plus.svg" alt="" /></button>
             <button class="icon-button" aria-label="Expand panel"><img src="assets/figma/agent-expand.svg" alt="" /></button>
             <button class="icon-button" aria-label="Collapse agent panel"><img src="assets/figma/agent-panel-left.svg" alt="" /></button>
           </div>
         </header>
 
         <div class="agent-conversation" id="agentConversation" role="tabpanel" aria-labelledby="mainAgentTab">
+          <section class="agent-ask-chat-block" id="agentAskChatBlock" aria-live="polite" hidden></section>
           <section class="review-chat-block" id="reviewChatBlock" aria-live="polite" hidden></section>
         </div>
 
@@ -220,11 +218,19 @@
         </section>
 
         <form class="composer" id="chatComposer">
-          <div class="file-chip">
-            <span class="agent-file-icon" aria-hidden="true"><img src="assets/figma/agent-file-base.svg" alt="" /><img src="assets/figma/agent-file-text.svg" alt="" /></span>
-            <span>From Dots to Direction</span>
+          <div class="composer-content">
+            <div class="composer-attachment-bar">
+              <div class="file-chip">
+                <span class="agent-file-icon" aria-hidden="true"><img src="assets/figma/agent-file-base.svg" alt="" /><img src="assets/figma/agent-file-text.svg" alt="" /></span>
+                <span>From Dots to Direction</span>
+              </div>
+              <button class="quote-chip composer-quote-chip" id="composerQuoteChip" type="button" aria-label="Jump to quoted text" hidden>
+                <span class="quote-reference-icon" aria-hidden="true"><img src="assets/figma/quote-reference-base.svg" alt="" /><img src="assets/figma/quote-reference-cursor.svg" alt="" /></span>
+                <span class="quote-chip-label" id="composerQuoteLabel"></span>
+              </button>
+            </div>
+            <textarea aria-label="Message agent" placeholder="Ask anything"></textarea>
           </div>
-          <textarea aria-label="Message agent" placeholder="Ask anything"></textarea>
           <div class="composer-actions">
             <button class="add-button" type="button" aria-label="Add attachment"><img src="assets/figma/agent-add.svg" alt="" /></button>
             <div class="model-select"><img src="assets/figma/agent-claude.svg" alt="" /><span>Claude</span><img src="assets/figma/agent-model-chevron.svg" alt="" /></div>
@@ -252,7 +258,7 @@
   </main>
 
   <div class="interaction-guide" id="interactionGuide" role="status">
-    <span><kbd>Space</kbd> summon agent</span>
+    <span><kbd>⌘</kbd> + <kbd>D</kbd> summon agent</span>
     <span>Select text to edit</span>
     <span>Type and press <kbd>Tab</kbd></span>
   </div>

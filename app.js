@@ -21,6 +21,10 @@
   const sendAllReview = document.getElementById('sendAllReview');
   const closeReviewSuggestion = document.getElementById('closeReviewSuggestion');
   const reviewChatBlock = document.getElementById('reviewChatBlock');
+  const agentAskChatBlock = document.getElementById('agentAskChatBlock');
+  const chatComposer = document.getElementById('chatComposer');
+  const composerQuoteChip = document.getElementById('composerQuoteChip');
+  const composerQuoteLabel = document.getElementById('composerQuoteLabel');
 
   const mainPrompt = document.getElementById('mainPrompt');
   const mainPromptInput = document.getElementById('mainPromptInput');
@@ -87,6 +91,9 @@
   let reviewHighlightTimer = null;
   let activeReviewDiff = null;
   let autoReviewTimer = null;
+  let routedSearchRun = 0;
+  let activeAgentQuote = null;
+  let quoteHighlightTimer = null;
 
   const reviewDefinitions = [
     {
@@ -438,6 +445,7 @@
       targets: (Array.isArray(config.targets) ? config.targets : [config.targets]).filter((target) => target instanceof Element),
       resultTitle: config.resultTitle || '',
       resultText: config.resultText || '',
+      sourcePrompt: config.sourcePrompt || '',
       documentTarget: null,
       documentAnchor: config.documentAnchor instanceof Element ? config.documentAnchor : null,
       documentMarker: null,
@@ -712,9 +720,7 @@
   }
 
   function placeMainPrompt() {
-    const workspaceRect = documentWorkspace.getBoundingClientRect();
-    const top = clamp(lastDocumentPoint.y - workspaceRect.top - 28, 342, workspaceRect.height - 72);
-    mainPrompt.style.top = `${top}px`;
+    mainPrompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function positionSubagentMenu() {
@@ -738,17 +744,32 @@
 
   function openMainPrompt(anchorBlock = null) {
     if (!selectionPrompt.hidden || !selectionReview.hidden) return;
-    mainPromptAnchorBlock = anchorBlock instanceof Element ? anchorBlock : null;
+    const host = document.createElement('section');
+    host.className = 'agent-ask-inline-host';
+    host.contentEditable = 'false';
+    const validAnchor = anchorBlock instanceof Element && anchorBlock.isConnected && documentPage.contains(anchorBlock)
+      ? anchorBlock
+      : null;
+    if (validAnchor && !validAnchor.textContent.replace(/\u200b/g, '').trim()) validAnchor.replaceWith(host);
+    else if (validAnchor) validAnchor.after(host);
+    else documentPage.append(host);
+    mainPromptAnchorBlock = host;
+    host.append(mainPrompt);
     dismissGuide();
-    placeMainPrompt();
     mainPrompt.hidden = false;
     mainPromptInput.value = '';
     syncMainPromptState();
-    window.requestAnimationFrame(() => mainPromptInput.focus());
+    window.requestAnimationFrame(() => {
+      placeMainPrompt();
+      mainPromptInput.focus();
+    });
   }
 
   function closeMainPrompt() {
+    const host = mainPromptAnchorBlock;
     mainPrompt.hidden = true;
+    documentWorkspace.append(mainPrompt);
+    host?.remove();
     mainPromptInput.value = '';
     mainPromptAnchorBlock = null;
     syncMainPromptState();
@@ -790,72 +811,6 @@
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }
 
-  function startReasoningStream(block, text, isCurrent) {
-    const root = block.copy;
-    const viewport = document.createElement('div');
-    const scroll = document.createElement('div');
-    const transcript = document.createElement('div');
-    const paragraph = document.createElement('p');
-    viewport.className = 't-reason-viewport';
-    scroll.className = 't-reason-scroll';
-    transcript.className = 't-reason-text';
-    paragraph.textContent = text;
-    transcript.append(paragraph);
-    scroll.append(transcript);
-    viewport.append(scroll);
-    root.classList.add('t-reason');
-    root.replaceChildren(viewport);
-
-    let intervalId = 0;
-    let wrapTimerId = 0;
-    let frameId = 0;
-    let cancelled = false;
-
-    frameId = window.requestAnimationFrame(() => {
-      if (cancelled || !isCurrent()) return;
-      const copyHeight = transcript.getBoundingClientRect().height;
-      const viewportHeight = viewport.getBoundingClientRect().height;
-      if (!copyHeight || copyHeight <= viewportHeight) return;
-
-      const clone = transcript.cloneNode(true);
-      clone.setAttribute('aria-hidden', 'true');
-      scroll.append(clone);
-
-      const styles = getComputedStyle(document.documentElement);
-      const lineHeight = Number.parseFloat(getComputedStyle(paragraph).lineHeight) || 24;
-      const lines = Number.parseFloat(styles.getPropertyValue('--reason-lines')) || 2;
-      const hold = readCssTime('--reason-hold', 840);
-      const step = readCssTime('--reason-step', 500);
-      const distance = lineHeight * lines;
-      let offset = 0;
-
-      intervalId = window.setInterval(() => {
-        if (cancelled || !isCurrent()) return;
-        offset += distance;
-        scroll.style.transition = 'transform var(--reason-step) var(--reason-ease)';
-        scroll.style.transform = `translateY(-${offset}px)`;
-
-        if (offset >= copyHeight) {
-          window.clearTimeout(wrapTimerId);
-          wrapTimerId = window.setTimeout(() => {
-            if (cancelled || !isCurrent()) return;
-            offset -= copyHeight;
-            scroll.style.transition = 'none';
-            scroll.style.transform = `translateY(-${offset}px)`;
-            void scroll.offsetHeight;
-          }, step);
-        }
-      }, hold);
-    });
-
-    return () => {
-      cancelled = true;
-      window.cancelAnimationFrame(frameId);
-      window.clearInterval(intervalId);
-      window.clearTimeout(wrapTimerId);
-    };
-  }
-
   function animateAiWorkingBlockResize(block, shouldExpand) {
     if (!block?.container?.isConnected) return;
     block.cancelResize?.();
@@ -868,7 +823,7 @@
     logoButton.setAttribute('aria-expanded', String(shouldExpand));
     logoButton.setAttribute('aria-label', shouldExpand ? 'Collapse generated content' : 'Expand generated content');
 
-    const targetHeight = shouldExpand ? card.scrollHeight : 82;
+    const targetHeight = shouldExpand ? card.scrollHeight : 49;
     let frameId = 0;
     let fallbackId = 0;
     let finished = false;
@@ -936,7 +891,7 @@
     const chat = document.createElement('button');
     chat.type = 'button';
     chat.className = 'ai-working-block-chat';
-    chat.innerHTML = '<img src="assets/figma/selection-chat.svg" alt=""><span>Chat</span>';
+    chat.innerHTML = '<img src="assets/figma/selection-chat.svg" alt=""><span>Expand to chat</span>';
     const divider = document.createElement('span');
     divider.className = 'ai-working-block-divider';
     const dismiss = document.createElement('button');
@@ -960,8 +915,7 @@
       animateAiWorkingBlockResize(block, !container.classList.contains('is-expanded'));
     });
     chat.addEventListener('click', () => {
-      closeSubagentWorkspace();
-      showToast('Continue this result in Agent Chat');
+      expandAiWorkingBlockToChat(block);
     });
     dismiss.addEventListener('click', () => dismissAiWorkingBlock(block));
     accept.addEventListener('click', () => acceptAiWorkingBlock(block));
@@ -972,8 +926,15 @@
     if (!block?.container?.isConnected) return;
     block.text = text;
     block.container.dataset.state = state;
+    if (state === 'working') {
+      const workingText = text.replace(/\n\s*\n/g, ' ');
+      block.copy.textContent = workingText;
+      block.copy.dataset.text = workingText;
+      block.copy.classList.add('t-shimmer');
+    }
     if (state === 'done') {
-      block.copy.classList.remove('t-reason');
+      block.copy.classList.remove('t-shimmer');
+      block.copy.removeAttribute('data-text');
       block.copy.textContent = text.replace(/\n\s*\n/g, '\n');
       block.logoButton.replaceChildren();
       const logo = document.createElement('img');
@@ -984,6 +945,37 @@
       block.logoButton.setAttribute('aria-label', 'Expand generated content');
       block.logoButton.setAttribute('aria-expanded', 'false');
     }
+  }
+
+  function expandAiWorkingBlockToChat(block) {
+    if (!block?.container?.isConnected || block.container.dataset.state !== 'done') return;
+    const task = subagentTasks.get(block.taskId);
+    const prompt = task?.sourcePrompt || task?.title || 'Continue working with this draft';
+    const result = block.text || task?.resultText || '';
+
+    closeSubagentWorkspace();
+    syncComposerQuote(null);
+
+    const request = document.createElement('div');
+    request.className = 'user-message';
+    request.textContent = prompt;
+
+    const response = document.createElement('div');
+    response.className = 'assistant-message agent-expanded-result';
+    const introduction = document.createElement('p');
+    introduction.textContent = `I finished the ${task?.title ? `“${task.title}” draft` : 'draft'} in the document. Here’s the current version—we can keep refining it in this chat.`;
+    const resultCopy = document.createElement('div');
+    resultCopy.className = 'agent-expanded-result-copy';
+    createInsertedParagraphs(result).forEach((paragraph) => resultCopy.append(paragraph));
+    response.append(introduction, resultCopy);
+
+    agentAskChatBlock.replaceChildren(request, response, createAgentMessageActions('Regenerate response'));
+    agentAskChatBlock.hidden = false;
+    window.requestAnimationFrame(() => {
+      agentConversation.scrollTo({ top: 0, behavior: 'smooth' });
+      chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
+    });
+    showToast('Conversation sent to Agent Chat');
   }
 
   function createInsertedParagraphs(text) {
@@ -1048,7 +1040,7 @@
       insertText: diaryResult,
       target: () => subagentDiarySection,
       anchor: () => subagentDiaryCopy,
-      duration: 7200,
+      duration: 11000,
     },
     summary: {
       title: 'Expand the summary',
@@ -1060,7 +1052,7 @@
       insertText: mainAgentResult,
       target: () => aiCopyRow,
       anchor: () => aiCopyContinuation,
-      duration: 8000,
+      duration: 12000,
     },
     grammar: {
       title: 'Check grammar',
@@ -1072,7 +1064,7 @@
       insertText: grammarResult,
       target: () => document.getElementById('reviewTargetLead'),
       anchor: () => document.getElementById('reviewTargetLead'),
-      duration: 6600,
+      duration: 10500,
     },
   };
 
@@ -1088,7 +1080,7 @@
     return matches.length ? [...new Set(matches)] : ['summary'];
   }
 
-  function startDemoSubagent(kind, customTitle = '', insertionTarget = null) {
+  function startDemoSubagent(kind, customTitle = '', insertionTarget = null, sourcePrompt = '') {
     const definition = demoTaskDefinitions[kind];
     if (!definition) return null;
     const existing = [...subagentTasks.values()].find((task) => task.kind === kind && task.state !== 'done');
@@ -1112,6 +1104,7 @@
       documentAnchor: insertionTarget?.copy || definition.anchor?.() || target,
       resultTitle: definition.resultTitle,
       resultText: definition.resultText,
+      sourcePrompt,
       aiBlock: isBlockResult ? insertionTarget : null,
     });
     if (isBlockResult) insertionTarget.taskId = taskId;
@@ -1122,7 +1115,6 @@
       updateSubagentTask(taskId, { state: 'working', detail: definition.workingDetail });
       if (isBlockResult) {
         setAiWorkingBlockState(insertionTarget, 'working', outputText);
-        task.cancelStream = startReasoningStream(insertionTarget, outputText, () => task.state === 'working');
       } else if (insertionTarget) {
         target.classList.add('is-working');
         task.cancelStream = replayStream(outputTarget, outputText, () => task.state === 'working');
@@ -1194,6 +1186,7 @@
     const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
     mainPromptAnchorBlock = null;
     mainPrompt.hidden = true;
+    documentWorkspace.append(mainPrompt);
     mainPromptInput.value = '';
     syncMainPromptState();
     const kinds = detectDemoTasks(prompt);
@@ -1202,6 +1195,7 @@
       kind,
       kinds.length === 1 && kind === 'summary' ? titleFromPrompt(prompt) : '',
       anchoredTargets.get(kind) || null,
+      prompt,
     ));
     subagentMenu.hidden = true;
     subagentEntry.setAttribute('aria-expanded', 'false');
@@ -1209,6 +1203,166 @@
     if (lastAnchoredTarget) placeCaretAfter(lastAnchoredTarget);
     else documentSurface.focus({ preventScroll: true });
     showToast(kinds.length > 1 ? `${kinds.length} subagents started` : 'Subagent started');
+  }
+
+  function classifyAgentIntent(prompt) {
+    const normalized = prompt.trim().toLowerCase();
+    const searchSignals = [
+      /\b(search|find|look up|research|browse|source|cite|citation|latest|current|news|online|web)\b/,
+      /(搜索|搜一下|查找|查询|检索|调研|资料|来源|引用|最新|新闻|网上|网页)/,
+    ];
+    const writingSignals = [
+      /\b(write|draft|rewrite|expand|continue|summarize|polish|edit|journal|diary|grammar|proofread)\b/,
+      /(写|改写|扩写|续写|摘要|总结|润色|日记|语病|校对|编辑)/,
+    ];
+    if (searchSignals.some((pattern) => pattern.test(normalized))) return 'search';
+    if (writingSignals.some((pattern) => pattern.test(normalized))) return 'writing';
+    return 'writing';
+  }
+
+  function quoteLabel(text) {
+    return text.replace(/\s+/g, ' ').trim();
+  }
+
+  function revealAgentQuote(target = activeAgentQuote?.target) {
+    if (!(target instanceof Element) || !target.isConnected) {
+      showToast('The quoted text is no longer in the document');
+      return;
+    }
+    closeSubagentWorkspace();
+    window.clearTimeout(quoteHighlightTimer);
+    target.classList.remove('quote-target-highlight');
+    target.getBoundingClientRect();
+    target.classList.add('quote-target-highlight');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    quoteHighlightTimer = window.setTimeout(() => target.classList.remove('quote-target-highlight'), 1400);
+    showToast('Jumped to quoted text');
+  }
+
+  function createAgentQuoteChip(text, target) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'quote-chip message-quote-chip';
+    chip.setAttribute('aria-label', 'Jump to quoted text');
+    chip.title = text;
+    chip.innerHTML = '<span class="quote-reference-icon" aria-hidden="true"><img src="assets/figma/quote-reference-base.svg" alt=""><img src="assets/figma/quote-reference-cursor.svg" alt=""></span><span class="quote-chip-label"></span>';
+    chip.querySelector('.quote-chip-label').textContent = quoteLabel(text);
+    chip.addEventListener('click', () => revealAgentQuote(target));
+    return chip;
+  }
+
+  function syncComposerQuote(quote = null) {
+    activeAgentQuote = quote?.text && quote?.target ? quote : null;
+    composerQuoteChip.hidden = !activeAgentQuote;
+    composerQuoteLabel.textContent = activeAgentQuote ? quoteLabel(activeAgentQuote.text) : '';
+    composerQuoteChip.title = activeAgentQuote?.text || '';
+  }
+
+  function createAgentMessageActions(primaryActionLabel = 'Search again') {
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+    [
+      ['agent-refresh.svg', primaryActionLabel],
+      ['agent-thumbs-up.svg', 'Helpful response'],
+      ['agent-thumbs-down.svg', 'Unhelpful response'],
+      ['agent-copy.svg', 'Copy response'],
+    ].forEach(([icon, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('aria-label', label);
+      button.innerHTML = `<img src="assets/figma/${icon}" alt="">`;
+      button.addEventListener('click', () => showToast(label));
+      actions.append(button);
+    });
+    return actions;
+  }
+
+  function searchAnswerFor(prompt, quotedText = '') {
+    const lower = prompt.toLowerCase();
+    if (/(notion|笔记|note)/.test(lower)) {
+      return {
+        summary: quotedText
+          ? 'Using the selected passage as context, I found a useful pattern across current note-taking guidance: capture the smallest meaningful unit first, then add context only when it helps the idea move forward.'
+          : 'I found a useful pattern across current note-taking guidance: capture the smallest meaningful unit first, then add context only when it helps the idea move forward.',
+        points: ['Keep capture friction low.', 'Separate collecting from organizing.', 'Turn recurring notes into a concrete next action.'],
+      };
+    }
+    return {
+      summary: quotedText
+        ? 'I carried the selected passage into this search so the findings stay grounded in the part of the document you were working on. Here is a concise research pass you can continue in this session.'
+        : 'I moved this request into the main Agent session because it needs outside information. Here is a concise research pass you can keep exploring without interrupting the document draft.',
+      points: ['Start with the most recent primary sources.', 'Compare at least two independent references.', 'Bring only the verified findings back into the document.'],
+    };
+  }
+
+  function routeSearchToAgentSession(prompt, quote = null) {
+    const runId = ++routedSearchRun;
+    closeSubagentWorkspace();
+    const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
+    mainPromptAnchorBlock = null;
+    mainPrompt.hidden = true;
+    documentWorkspace.append(mainPrompt);
+    anchorBlock?.remove();
+    mainPromptInput.value = '';
+    syncMainPromptState();
+    syncComposerQuote(quote);
+
+    const requestGroup = document.createElement('div');
+    requestGroup.className = 'agent-search-request';
+    if (quote) requestGroup.append(createAgentQuoteChip(quote.text, quote.target));
+    const request = document.createElement('div');
+    request.className = 'user-message';
+    request.textContent = prompt;
+    requestGroup.append(request);
+    const thinking = document.createElement('div');
+    thinking.className = 'assistant-message agent-search-answer';
+    thinking.textContent = 'Searching and checking relevant sources…';
+    agentAskChatBlock.replaceChildren(requestGroup, thinking);
+    agentAskChatBlock.hidden = false;
+    agentPanel.classList.add('is-receiving-search');
+    window.setTimeout(() => agentPanel.classList.remove('is-receiving-search'), 520);
+    agentConversation.scrollTo({ top: 0, behavior: 'smooth' });
+
+    window.setTimeout(() => {
+      if (runId !== routedSearchRun) return;
+      const answer = searchAnswerFor(prompt, quote?.text || '');
+      const response = document.createElement('div');
+      response.className = 'assistant-message agent-search-answer';
+      const copy = document.createElement('p');
+      copy.textContent = answer.summary;
+      const list = document.createElement('ul');
+      list.className = 'agent-search-sources';
+      answer.points.forEach((point) => {
+        const item = document.createElement('li');
+        item.textContent = point;
+        list.append(item);
+      });
+      response.append(copy, list);
+      agentAskChatBlock.replaceChildren(requestGroup, response, createAgentMessageActions());
+      showToast('Search continued in Agent Chat');
+    }, 850);
+  }
+
+  function routeSelectionSearchToAgentSession(prompt) {
+    selectionPrompt.hidden = true;
+    selectionPromptInput.value = '';
+    selectionMarker = selectionMarker?.isConnected ? selectionMarker : markStoredSelection();
+    selectionMarker?.classList.remove('agent-selection', 'is-working', 'quote-target-highlight');
+    selectionMarker?.classList.add('agent-quote-anchor');
+    window.getSelection()?.removeAllRanges();
+    const quote = {
+      text: selectionRequest,
+      target: selectionMarker || selectionAnchor || selectableCopy,
+    };
+    storedRange = null;
+    selectionAnchor = quote.target;
+    selectionRequest = '';
+    routeSearchToAgentSession(prompt, quote);
+  }
+
+  function submitMainAgentPrompt(prompt) {
+    if (classifyAgentIntent(prompt) === 'search') routeSearchToAgentSession(prompt);
+    else runMainAgent(prompt);
   }
 
   function positionFloating(element, viewportRect, preferredWidth) {
@@ -1291,10 +1445,10 @@
 
   function unwrapMarker() {
     if (!selectionMarker) return;
-    if (selectionMarker.matches('.agent-selection') && selectionMarker.parentNode) {
+    if (selectionMarker.matches('span.agent-selection, span.agent-quote-anchor') && selectionMarker.parentNode) {
       selectionMarker.replaceWith(...selectionMarker.childNodes);
     } else {
-      selectionMarker.classList.remove('agent-selection', 'is-working');
+      selectionMarker.classList.remove('agent-selection', 'agent-quote-anchor', 'is-working', 'quote-target-highlight');
     }
     selectionMarker = null;
   }
@@ -1594,11 +1748,15 @@
     const hasSelection = selection && !selection.isCollapsed && selection.toString().trim();
     const inDocument = target === documentSurface || documentSurface.contains(target);
     const emptyLine = isTypingTarget ? emptyEditableLine(selection) : null;
-    const canSummonAgent = !isTypingTarget || Boolean(emptyLine);
-    if (event.code === 'Space' && inDocument && canSummonAgent && !hasSelection && mainPrompt.hidden) {
+    const caretNode = selection?.rangeCount ? selection.getRangeAt(0).startContainer : null;
+    const caretElement = caretNode?.nodeType === Node.ELEMENT_NODE ? caretNode : caretNode?.parentElement;
+    const caretBlock = caretElement?.closest?.('p, blockquote, li, h1, h2, div:not([class])');
+    const canSummonAgent = !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
+    const commandD = event.code === 'KeyD' && event.metaKey && !event.ctrlKey && !event.altKey;
+    if (commandD && inDocument && canSummonAgent && !hasSelection && mainPrompt.hidden) {
       event.preventDefault();
       if (emptyLine) rememberCaretPoint(emptyLine);
-      openMainPrompt(emptyLine?.block || null);
+      openMainPrompt(emptyLine?.block || caretBlock || null);
     }
   });
 
@@ -1609,7 +1767,7 @@
       mainPromptInput.focus();
       return;
     }
-    runMainAgent(prompt);
+    submitMainAgentPrompt(prompt);
   });
 
   mainPromptInput.addEventListener('input', syncMainPromptState);
@@ -1621,7 +1779,8 @@
       selectionPromptInput.focus();
       return;
     }
-    beginSelectionEdit(request);
+    if (classifyAgentIntent(request) === 'search') routeSelectionSearchToAgentSession(request);
+    else beginSelectionEdit(request);
   });
 
   selectionPrompt.addEventListener('pointerdown', () => {
@@ -1723,7 +1882,9 @@
     }
   });
 
-  document.getElementById('chatComposer').addEventListener('submit', (event) => {
+  composerQuoteChip.addEventListener('click', () => revealAgentQuote());
+
+  chatComposer.addEventListener('submit', (event) => {
     event.preventDefault();
     showToast('Demo composer is ready');
   });
