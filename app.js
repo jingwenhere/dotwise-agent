@@ -11,7 +11,10 @@
   const subagentDiarySection = document.getElementById('subagentDiarySection');
   const subagentDiaryCopy = document.getElementById('subagentDiaryCopy');
   const reviewStatus = document.getElementById('reviewStatus');
+  const contentShell = document.querySelector('.content-shell');
   const agentPanel = document.querySelector('.agent-panel');
+  const openAgentPanelButton = document.getElementById('openAgentPanel');
+  const collapseAgentPanelButton = document.getElementById('collapseAgentPanel');
   const agentConversation = document.getElementById('agentConversation');
   const mainAgentTab = document.getElementById('mainAgentTab');
   const subagentPanelTab = document.getElementById('subagentPanelTab');
@@ -28,13 +31,16 @@
 
   const mainPrompt = document.getElementById('mainPrompt');
   const mainPromptInput = document.getElementById('mainPromptInput');
+  const mainPromptIntent = document.getElementById('mainPromptIntent');
   const mainPromptSubmit = mainPrompt.querySelector('.prompt-submit');
   const selectionPrompt = document.getElementById('selectionPrompt');
   const selectionPromptInput = document.getElementById('selectionPromptInput');
+  const selectionPromptIntent = document.getElementById('selectionPromptIntent');
   const selectionReview = document.getElementById('selectionReview');
   const selectionReviewCopy = document.getElementById('selectionReviewCopy');
   const confirmSelection = document.getElementById('confirmSelection');
   const revertSelection = document.getElementById('revertSelection');
+  const agentShortcutHint = document.getElementById('agentShortcutHint');
 
   const subagentEntry = document.getElementById('subagentEntry');
   const subagentMenu = document.getElementById('subagentMenu');
@@ -66,12 +72,15 @@
 
   let lastDocumentPoint = { x: 390, y: 390 };
   let mainPromptAnchorBlock = null;
+  let mainPromptReplacedBlock = null;
+  let mainPromptIntentOverride = null;
   let storedRange = null;
   let selectionMarker = null;
   let generatedPreview = null;
   let selectionAnchor = null;
   let selectionRequest = '';
   let selectionPromptEngaged = false;
+  let selectionPromptIntentOverride = null;
   let documentSelectionPointerActive = false;
   let documentSelectionKeyboardActive = false;
   let selectionReviewPositionFrame = 0;
@@ -94,6 +103,7 @@
   let routedSearchRun = 0;
   let activeAgentQuote = null;
   let quoteHighlightTimer = null;
+  let activeShortcutBlock = null;
 
   const reviewDefinitions = [
     {
@@ -154,6 +164,64 @@
 
   function dismissGuide() {
     interactionGuide.classList.add('is-dismissed');
+  }
+
+  function setAgentPanelCollapsed(collapsed, { focus = true } = {}) {
+    contentShell.classList.toggle('is-agent-collapsed', collapsed);
+    agentPanel.setAttribute('aria-hidden', String(collapsed));
+    agentPanel.inert = collapsed;
+    openAgentPanelButton.hidden = !collapsed;
+    openAgentPanelButton.setAttribute('aria-expanded', String(!collapsed));
+
+    if (collapsed) {
+      subagentMenu.hidden = true;
+      subagentEntry.setAttribute('aria-expanded', 'false');
+      if (focus && agentPanel.contains(document.activeElement)) documentPage.focus({ preventScroll: true });
+      window.setTimeout(updateAgentShortcutHint, 260);
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (focus) mainAgentTab.focus({ preventScroll: true });
+      positionSubagentMenu();
+    });
+    window.setTimeout(updateAgentShortcutHint, 260);
+  }
+
+  function hideAgentShortcutHint() {
+    activeShortcutBlock?.classList.remove('is-ai-hint-anchor');
+    activeShortcutBlock = null;
+    agentShortcutHint.hidden = true;
+  }
+
+  function updateAgentShortcutHint() {
+    if (!mainPrompt.hidden || !selectionPrompt.hidden || !selectionReview.hidden) {
+      hideAgentShortcutHint();
+      return;
+    }
+
+    const emptyLine = emptyEditableLine(window.getSelection());
+    if (!emptyLine) {
+      hideAgentShortcutHint();
+      return;
+    }
+
+    const blockRect = emptyLine.block.getBoundingClientRect();
+    const workspaceRect = documentWorkspace.getBoundingClientRect();
+    const scrollerRect = documentSurface.getBoundingClientRect();
+    if (blockRect.bottom < scrollerRect.top || blockRect.top > scrollerRect.bottom) {
+      hideAgentShortcutHint();
+      return;
+    }
+
+    if (activeShortcutBlock !== emptyLine.block) {
+      activeShortcutBlock?.classList.remove('is-ai-hint-anchor');
+      activeShortcutBlock = emptyLine.block;
+      activeShortcutBlock.classList.add('is-ai-hint-anchor');
+    }
+    agentShortcutHint.style.left = `${blockRect.left - workspaceRect.left}px`;
+    agentShortcutHint.style.top = `${blockRect.top - workspaceRect.top}px`;
+    agentShortcutHint.hidden = false;
   }
 
   window.setTimeout(dismissGuide, 7000);
@@ -740,22 +808,30 @@
     const isReady = Boolean(mainPromptInput.value.trim());
     mainPromptSubmit.disabled = !isReady;
     mainPromptSubmit.classList.toggle('is-ready', isReady);
+    syncPromptIntent(mainPromptInput, mainPromptIntent, mainPromptIntentOverride);
   }
 
   function openMainPrompt(anchorBlock = null) {
     if (!selectionPrompt.hidden || !selectionReview.hidden) return;
+    hideAgentShortcutHint();
     const host = document.createElement('section');
     host.className = 'agent-ask-inline-host';
     host.contentEditable = 'false';
     const validAnchor = anchorBlock instanceof Element && anchorBlock.isConnected && documentPage.contains(anchorBlock)
       ? anchorBlock
       : null;
-    if (validAnchor && !validAnchor.textContent.replace(/\u200b/g, '').trim()) validAnchor.replaceWith(host);
-    else if (validAnchor) validAnchor.after(host);
-    else documentPage.append(host);
+    if (validAnchor && !validAnchor.textContent.replace(/\u200b/g, '').trim()) {
+      mainPromptReplacedBlock = validAnchor;
+      validAnchor.replaceWith(host);
+    } else {
+      mainPromptReplacedBlock = null;
+      if (validAnchor) validAnchor.after(host);
+      else documentPage.append(host);
+    }
     mainPromptAnchorBlock = host;
     host.append(mainPrompt);
     dismissGuide();
+    mainPromptIntentOverride = null;
     mainPrompt.hidden = false;
     mainPromptInput.value = '';
     syncMainPromptState();
@@ -769,11 +845,26 @@
     const host = mainPromptAnchorBlock;
     mainPrompt.hidden = true;
     documentWorkspace.append(mainPrompt);
-    host?.remove();
+    if (host?.isConnected && mainPromptReplacedBlock) host.replaceWith(mainPromptReplacedBlock);
+    else host?.remove();
     mainPromptInput.value = '';
+    mainPromptIntentOverride = null;
     mainPromptAnchorBlock = null;
+    const restoredBlock = mainPromptReplacedBlock;
+    mainPromptReplacedBlock = null;
     syncMainPromptState();
-    documentSurface.focus({ preventScroll: true });
+    if (restoredBlock?.isConnected) {
+      const range = document.createRange();
+      range.selectNodeContents(restoredBlock);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      documentPage.focus({ preventScroll: true });
+      window.requestAnimationFrame(updateAgentShortcutHint);
+    } else {
+      documentSurface.focus({ preventScroll: true });
+    }
   }
 
   function readCssTime(variable, fallback) {
@@ -1185,9 +1276,11 @@
   function runMainAgent(prompt) {
     const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
     mainPromptAnchorBlock = null;
+    mainPromptReplacedBlock = null;
     mainPrompt.hidden = true;
     documentWorkspace.append(mainPrompt);
     mainPromptInput.value = '';
+    mainPromptIntentOverride = null;
     syncMainPromptState();
     const kinds = detectDemoTasks(prompt);
     const anchoredTargets = createAnchoredTaskTargets(kinds, anchorBlock);
@@ -1220,6 +1313,30 @@
     return 'writing';
   }
 
+  function syncPromptIntent(input, button, override = null) {
+    const hasInput = Boolean(input.value.trim());
+    const intent = override || classifyAgentIntent(input.value);
+    const isSearch = intent === 'search';
+    button.hidden = !hasInput;
+    button.dataset.intent = intent;
+    button.classList.toggle('is-overridden', Boolean(override));
+    button.querySelector('span').textContent = isSearch ? 'Ask in chat' : 'Write here';
+    button.setAttribute('aria-label', `${isSearch ? 'Ask in Agent Chat' : 'Write in document'}. Click to switch destination.`);
+    button.title = override ? 'Destination selected manually' : 'Destination detected from your request';
+    return intent;
+  }
+
+  function togglePromptIntent(kind) {
+    const isSelection = kind === 'selection';
+    const input = isSelection ? selectionPromptInput : mainPromptInput;
+    const button = isSelection ? selectionPromptIntent : mainPromptIntent;
+    const nextIntent = button.dataset.intent === 'search' ? 'writing' : 'search';
+    if (isSelection) selectionPromptIntentOverride = nextIntent;
+    else mainPromptIntentOverride = nextIntent;
+    syncPromptIntent(input, button, nextIntent);
+    input.focus({ preventScroll: true });
+  }
+
   function quoteLabel(text) {
     return text.replace(/\s+/g, ' ').trim();
   }
@@ -1245,7 +1362,7 @@
     chip.className = 'quote-chip message-quote-chip';
     chip.setAttribute('aria-label', 'Jump to quoted text');
     chip.title = text;
-    chip.innerHTML = '<span class="quote-reference-icon" aria-hidden="true"><img src="assets/figma/quote-reference-base.svg" alt=""><img src="assets/figma/quote-reference-cursor.svg" alt=""></span><span class="quote-chip-label"></span>';
+    chip.innerHTML = '<span class="quote-reference-icon" aria-hidden="true"><img src="assets/figma/quote-reference-base.svg" alt=""></span><span class="quote-chip-label"></span>';
     chip.querySelector('.quote-chip-label').textContent = quoteLabel(text);
     chip.addEventListener('click', () => revealAgentQuote(target));
     return chip;
@@ -1297,13 +1414,16 @@
 
   function routeSearchToAgentSession(prompt, quote = null) {
     const runId = ++routedSearchRun;
+    setAgentPanelCollapsed(false, { focus: false });
     closeSubagentWorkspace();
     const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
     mainPromptAnchorBlock = null;
+    mainPromptReplacedBlock = null;
     mainPrompt.hidden = true;
     documentWorkspace.append(mainPrompt);
     anchorBlock?.remove();
     mainPromptInput.value = '';
+    mainPromptIntentOverride = null;
     syncMainPromptState();
     syncComposerQuote(quote);
 
@@ -1346,6 +1466,7 @@
   function routeSelectionSearchToAgentSession(prompt) {
     selectionPrompt.hidden = true;
     selectionPromptInput.value = '';
+    selectionPromptIntentOverride = null;
     selectionMarker = selectionMarker?.isConnected ? selectionMarker : markStoredSelection();
     selectionMarker?.classList.remove('agent-selection', 'is-working', 'quote-target-highlight');
     selectionMarker?.classList.add('agent-quote-anchor');
@@ -1360,16 +1481,17 @@
     routeSearchToAgentSession(prompt, quote);
   }
 
-  function submitMainAgentPrompt(prompt) {
-    if (classifyAgentIntent(prompt) === 'search') routeSearchToAgentSession(prompt);
+  function submitMainAgentPrompt(prompt, intent = classifyAgentIntent(prompt)) {
+    if (intent === 'search') routeSearchToAgentSession(prompt);
     else runMainAgent(prompt);
   }
 
   function positionFloating(element, viewportRect, preferredWidth) {
     const workspaceRect = documentWorkspace.getBoundingClientRect();
     const width = Math.min(preferredWidth, workspaceRect.width - 32);
+    const height = element.offsetHeight || 56;
     const left = clamp(viewportRect.left - workspaceRect.left + viewportRect.width / 2 - width / 2, 16, workspaceRect.width - width - 16);
-    const top = clamp(viewportRect.bottom - workspaceRect.top + 8, 332, workspaceRect.height - 52);
+    const top = clamp(viewportRect.bottom - workspaceRect.top + 8, 332, workspaceRect.height - height - 12);
     element.style.left = `${left}px`;
     element.style.top = `${top}px`;
     element.style.width = `${width}px`;
@@ -1380,7 +1502,7 @@
     const targetRect = generatedPreview.getBoundingClientRect();
     const workspaceRect = documentWorkspace.getBoundingClientRect();
     const scrollerRect = documentSurface.getBoundingClientRect();
-    const width = Math.min(457, workspaceRect.width - 32);
+    const width = Math.min(395, workspaceRect.width - 32);
     const left = clamp(
       targetRect.left - workspaceRect.left + targetRect.width / 2 - width / 2,
       16,
@@ -1434,8 +1556,10 @@
     selectionAnchor = selectionMarker;
     window.getSelection()?.removeAllRanges();
     selectionPromptInput.value = '';
+    selectionPromptIntentOverride = null;
+    syncPromptIntent(selectionPromptInput, selectionPromptIntent, null);
     selectionPrompt.hidden = false;
-    positionFloating(selectionPrompt, rect, 375);
+    positionFloating(selectionPrompt, rect, 380);
   }
 
   function scheduleSelectionDetection(delay = 140) {
@@ -1504,6 +1628,7 @@
     const completionText = generateSelectionText(request);
     const taskTitle = titleFromPrompt(request) || 'Expand the selected text';
     selectionPrompt.hidden = true;
+    selectionPromptIntentOverride = null;
     selectionMarker = selectionMarker?.isConnected ? selectionMarker : markStoredSelection();
     selectionMarker?.classList.add('is-working');
     selectionAnchor = selectionMarker || selectableCopy;
@@ -1669,6 +1794,7 @@
 
   documentSurface.addEventListener('pointerdown', (event) => {
     lastDocumentPoint = { x: event.clientX, y: event.clientY };
+    hideAgentShortcutHint();
     if (event.target === documentSurface) {
       documentSurface.focus({ preventScroll: true });
     }
@@ -1687,6 +1813,10 @@
       unwrapMarker();
       storedRange = null;
       selectionAnchor = null;
+    }
+
+    if (documentPage.contains(event.target) && isCollapsed) {
+      window.requestAnimationFrame(updateAgentShortcutHint);
     }
   });
 
@@ -1718,6 +1848,38 @@
       x: rect.left || block.getBoundingClientRect().left,
       y: rect.bottom || block.getBoundingClientRect().bottom,
     };
+  }
+
+  function consumeSlashAgentCommand(selection = window.getSelection()) {
+    if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
+    const range = selection.getRangeAt(0);
+    let textNode = range.startContainer;
+    let offset = range.startOffset;
+
+    if (textNode.nodeType === Node.ELEMENT_NODE) {
+      const candidate = textNode.childNodes[Math.max(0, offset - 1)];
+      if (!candidate || candidate.nodeType !== Node.TEXT_NODE) return null;
+      textNode = candidate;
+      offset = candidate.data.length;
+    }
+    if (textNode.nodeType !== Node.TEXT_NODE || !textNode.parentElement) return null;
+    const parent = textNode.parentElement;
+    if (!documentPage.contains(parent) || parent.closest('[contenteditable="false"]')) return null;
+
+    const textBeforeCaret = textNode.data.slice(0, offset);
+    if (!textBeforeCaret.toLowerCase().endsWith('/ai')) return null;
+    const beforeCommand = textBeforeCaret.slice(0, -3);
+    if (beforeCommand && !/\s$/.test(beforeCommand)) return null;
+
+    const block = parent.closest('p, blockquote, li, h1, h2, div:not([class])');
+    if (!block || !documentPage.contains(block)) return null;
+    textNode.deleteData(offset - 3, 3);
+    const caret = document.createRange();
+    caret.setStart(textNode, offset - 3);
+    caret.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caret);
+    return { range: caret, block };
   }
 
   document.addEventListener('keydown', (event) => {
@@ -1752,7 +1914,7 @@
     const caretElement = caretNode?.nodeType === Node.ELEMENT_NODE ? caretNode : caretNode?.parentElement;
     const caretBlock = caretElement?.closest?.('p, blockquote, li, h1, h2, div:not([class])');
     const canSummonAgent = !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
-    const commandD = event.code === 'KeyD' && event.metaKey && !event.ctrlKey && !event.altKey;
+    const commandD = event.key.toLowerCase() === 'd' && event.metaKey && !event.ctrlKey && !event.altKey;
     if (commandD && inDocument && canSummonAgent && !hasSelection && mainPrompt.hidden) {
       event.preventDefault();
       if (emptyLine) rememberCaretPoint(emptyLine);
@@ -1767,10 +1929,23 @@
       mainPromptInput.focus();
       return;
     }
-    submitMainAgentPrompt(prompt);
+    submitMainAgentPrompt(prompt, mainPromptIntent.dataset.intent || classifyAgentIntent(prompt));
   });
 
   mainPromptInput.addEventListener('input', syncMainPromptState);
+  mainPromptIntent.addEventListener('click', () => togglePromptIntent('main'));
+  selectionPromptIntent.addEventListener('click', () => togglePromptIntent('selection'));
+  selectionPromptInput.addEventListener('input', () => {
+    syncPromptIntent(selectionPromptInput, selectionPromptIntent, selectionPromptIntentOverride);
+  });
+
+  [mainPromptInput, selectionPromptInput].forEach((input) => {
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      input.form?.requestSubmit();
+    });
+  });
 
   selectionPrompt.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1779,7 +1954,7 @@
       selectionPromptInput.focus();
       return;
     }
-    if (classifyAgentIntent(request) === 'search') routeSelectionSearchToAgentSession(request);
+    if ((selectionPromptIntent.dataset.intent || classifyAgentIntent(request)) === 'search') routeSelectionSearchToAgentSession(request);
     else beginSelectionEdit(request);
   });
 
@@ -1794,6 +1969,7 @@
   document.addEventListener('selectionchange', () => {
     if (documentSelectionPointerActive || documentSelectionKeyboardActive) return;
     scheduleSelectionDetection();
+    window.requestAnimationFrame(updateAgentShortcutHint);
   });
 
   document.addEventListener('keyup', (event) => {
@@ -1817,12 +1993,14 @@
     if (!documentSelectionPointerActive) return;
     documentSelectionPointerActive = false;
     scheduleSelectionDetection(0);
+    window.requestAnimationFrame(updateAgentShortcutHint);
   };
 
   document.addEventListener('pointerup', finishDocumentSelection, true);
   document.addEventListener('pointercancel', finishDocumentSelection, true);
 
   documentPage.addEventListener('beforeinput', () => {
+    hideAgentShortcutHint();
     removeTabSuggestion();
     if (!selectionPrompt.hidden) {
       selectionPrompt.hidden = true;
@@ -1833,7 +2011,15 @@
   });
 
   documentPage.addEventListener('input', () => {
+    hideAgentShortcutHint();
     dismissGuide();
+    const slashInvocation = consumeSlashAgentCommand();
+    if (slashInvocation && mainPrompt.hidden && selectionPrompt.hidden && selectionReview.hidden) {
+      removeTabSuggestion();
+      rememberCaretPoint(slashInvocation);
+      openMainPrompt(slashInvocation.block);
+      return;
+    }
     scheduleTabSuggestion();
   });
 
@@ -1844,8 +2030,19 @@
       return;
     }
     if (event.key !== 'Shift' && event.key !== 'Control' && event.key !== 'Alt' && event.key !== 'Meta') {
+      if (!(event.metaKey && event.key.toLowerCase() === 'd')) hideAgentShortcutHint();
       removeTabSuggestion();
     }
+  });
+
+  openAgentPanelButton.addEventListener('click', () => {
+    setAgentPanelCollapsed(false);
+    dismissGuide();
+  });
+
+  collapseAgentPanelButton.addEventListener('click', () => {
+    setAgentPanelCollapsed(true);
+    dismissGuide();
   });
 
   subagentEntry.addEventListener('click', (event) => {
@@ -1865,7 +2062,9 @@
 
   window.addEventListener('resize', positionSubagentMenu);
   window.addEventListener('resize', scheduleSelectionReviewPosition);
+  window.addEventListener('resize', updateAgentShortcutHint);
   documentSurface.addEventListener('scroll', scheduleSelectionReviewPosition, { passive: true });
+  documentSurface.addEventListener('scroll', updateAgentShortcutHint, { passive: true });
 
   mainAgentTab.addEventListener('click', () => {
     closeSubagentWorkspace();
