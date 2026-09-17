@@ -1,14 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-default-interaction="a">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#eef7f7" />
-  <title>Dotwise — Document Agent</title>
+  <title>Dotwise — Document AI Sandbox</title>
   <link rel="icon" href="assets/figma/agent-document.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="sandbox-shell">
+    <aside class="sandbox-navigation" aria-label="Document AI interaction versions">
+      <div class="sandbox-brand"><img src="assets/figma/sandbox-brand.svg" alt="Dotwise" /></div>
+      <nav class="sandbox-version-menu" aria-label="Document AI">
+        <div class="sandbox-menu-heading">Document AI</div>
+        <a class="sandbox-version" data-interaction-link="a" href="?interaction=a">Interaction A</a>
+        <a class="sandbox-version" data-interaction-link="b" href="?interaction=b">Interaction B</a>
+      </nav>
+    </aside>
+    <div class="sandbox-stage">
   <main class="app-shell" aria-label="Dotwise document workspace">
     <div class="ambient-gradient" aria-hidden="true"></div>
 
@@ -127,7 +137,13 @@
             <img class="prompt-agent-icon" src="assets/figma/agent-document.svg" alt="" />
             <input id="mainPromptInput" type="text" autocomplete="off" placeholder="Ask AI to write or search" aria-label="Ask the document agent" />
           </div>
-          <button class="prompt-intent-route" id="mainPromptIntent" type="button" data-intent="writing" hidden><span>Write here</span></button>
+          <div class="prompt-intent-control">
+            <button class="prompt-intent-route" id="mainPromptIntent" type="button" data-intent="writing" aria-haspopup="listbox" aria-expanded="false" aria-controls="mainPromptIntentMenu" hidden><span>Write here</span><img src="assets/figma/chevron-down.svg" alt="" /></button>
+            <div class="prompt-intent-menu" id="mainPromptIntentMenu" role="listbox" aria-label="AI destination" hidden>
+              <button type="button" role="option" data-intent-option="search">Ask in chat</button>
+              <button type="button" role="option" data-intent-option="writing">Write here</button>
+            </div>
+          </div>
           <button class="prompt-submit" type="submit" aria-label="Send prompt" disabled><img src="assets/figma/prompt-main-send.svg" alt="" /></button>
         </form>
 
@@ -137,7 +153,13 @@
             <input id="selectionPromptInput" type="text" autocomplete="off" placeholder="Edit selection with AI" aria-label="Ask AI to edit selected text" />
           </div>
           <div class="prompt-inline-actions">
-            <button class="prompt-intent-route" id="selectionPromptIntent" type="button" data-intent="writing" hidden><span>Write here</span></button>
+            <div class="prompt-intent-control">
+              <button class="prompt-intent-route" id="selectionPromptIntent" type="button" data-intent="writing" aria-haspopup="listbox" aria-expanded="false" aria-controls="selectionPromptIntentMenu" hidden><span>Write here</span><img src="assets/figma/chevron-down.svg" alt="" /></button>
+              <div class="prompt-intent-menu" id="selectionPromptIntentMenu" role="listbox" aria-label="AI destination" hidden>
+                <button type="button" role="option" data-intent-option="search">Ask in chat</button>
+                <button type="button" role="option" data-intent-option="writing">Write here</button>
+              </div>
+            </div>
             <button class="prompt-submit dark" type="submit" aria-label="Send edit request"><img src="assets/figma/selection-prompt-send.svg" alt="" /></button>
           </div>
         </form>
@@ -154,9 +176,14 @@
         </div>
 
         <div class="agent-shortcut-hint" id="agentShortcutHint" hidden aria-hidden="true">
-          <span>Press</span>
-          <kbd><img src="assets/figma/command-icon.svg" alt="" /><span>D</span></kbd>
+          <span>Type</span>
+          <kbd>@@</kbd>
           <span>for AI</span>
+        </div>
+
+        <div class="inline-subagent-tooltip" id="inlineSubagentTooltip" role="tooltip" hidden>
+          <span id="inlineSubagentTooltipLabel"></span>
+          <button id="inlineSubagentResolve" type="button" aria-label="Resolve AI task" hidden><img src="assets/figma/ai-block-check.svg" alt="" /></button>
         </div>
 
       </section>
@@ -273,10 +300,11 @@
 
     </section>
   </main>
+    </div>
+  </div>
 
   <div class="interaction-guide" id="interactionGuide" role="status">
-    <span><kbd>⌘</kbd> + <kbd>D</kbd> summon agent</span>
-    <span>Type <kbd>/ai</kbd> at the cursor</span>
+    <span>Type <kbd>@@</kbd> to summon AI</span>
     <span>Select text to edit</span>
     <span>Type and press <kbd>Tab</kbd></span>
   </div>
