@@ -8,7 +8,7 @@
   --text-placeholder: #8d8d8d;
   --border-default: rgba(0, 0, 0, 0.12);
   --border-subtle: rgba(0, 0, 0, 0.09);
-  --blue: #3596c8;
+  --blue: #1e73ff;
   --blue-soft: #dff5ff;
   --green: #46a663;
   --orange: #ffad54;
@@ -1143,6 +1143,7 @@ textarea:focus-visible,
 }
 
 .inline-subagent-anchor.is-selection-anchor { color: inherit; background: transparent; }
+.inline-subagent-anchor.is-complete { color: var(--text-primary); }
 .inline-subagent-anchor:hover { text-decoration-color: #646464; }
 .inline-subagent-anchor:focus-visible { outline: 2px solid #646464; outline-offset: 3px; }
 
@@ -1306,6 +1307,10 @@ html[data-interaction="b"] .ai-working-block {
   text-align: left;
   color: #a5a5a5;
   text-decoration-color: #d2d2d2;
+}
+
+.ai-working-block[data-state="done"] .ai-working-block-anchor {
+  color: var(--text-primary);
 }
 
 html[data-interaction="b"] .ai-working-block-anchor,

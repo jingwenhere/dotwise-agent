@@ -1515,6 +1515,7 @@
       if (task.state === 'done') return;
       setSubagentDone(title, 'Ready to review', anchor, taskId);
       completeAiTaskStatus(task.statusElement);
+      anchor.classList.add('is-complete');
       if (tooltipTaskId === taskId) showInlineSubagentTooltip(taskId);
     }, 3200);
     return taskId;
