@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon">
+<g clip-path="url(#clip0_0_4)">
+<g id="App icon">
+<rect width="16" height="16" fill="#FAFAFA"/>
+</g>
+<path id="Exclude" d="M7.8916 3.06721C8.25575 2.93637 8.66155 2.99893 8.96875 3.2342L13.5537 6.74788C13.8347 6.96329 14 7.2971 14 7.6512V10.8983C13.9998 11.5267 13.4898 12.0359 12.8613 12.036H3.13867C2.51 12.036 2 11.526 2 10.8973V5.98616C2 5.50607 2.30121 5.0774 2.75293 4.91487L7.8916 3.06721ZM8.69141 4.72541C8.69131 4.23203 8.203 3.88794 7.73828 4.05354L3.3418 5.6219C3.11525 5.70275 2.96392 5.9175 2.96387 6.15803V10.536C2.96387 11.028 3.44982 11.3728 3.91406 11.2098L8.31055 9.66584C8.53856 9.58579 8.69141 9.37039 8.69141 9.12873V4.72541Z" fill="black"/>
+</g>
+<rect x="0.25" y="0.25" width="15.5" height="15.5" rx="3.75" stroke="black" stroke-opacity="0.1" stroke-width="0.5"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="16" height="16" rx="4" fill="white"/>
+</clipPath>
+</defs>
+</svg>

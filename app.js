@@ -6,6 +6,7 @@
   const interaction = requestedInteraction === 'a' || requestedInteraction === 'b'
     ? requestedInteraction
     : document.documentElement.dataset.defaultInteraction || 'a';
+  const isInteractionB = interaction === 'b';
   document.documentElement.dataset.interaction = interaction;
   document.querySelectorAll('[data-interaction-link]').forEach((link) => {
     if (link.dataset.interactionLink === interaction) link.setAttribute('aria-current', 'page');
@@ -85,6 +86,7 @@
 
   let lastDocumentPoint = { x: 390, y: 390 };
   let mainPromptAnchorBlock = null;
+  let mainPromptInsertionRange = null;
   let mainPromptReplacedBlock = null;
   let mainPromptIntentOverride = null;
   let storedRange = null;
@@ -114,7 +116,6 @@
   let reviewHighlightTimer = null;
   let activeReviewDiff = null;
   let autoReviewTimer = null;
-  let routedSearchRun = 0;
   let activeAgentQuote = null;
   let quoteHighlightTimer = null;
   let activeShortcutBlock = null;
@@ -264,6 +265,13 @@
     if (seconds < 60) return `${seconds}s ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     return `${Math.floor(seconds / 3600)}h ago`;
+  }
+
+  function taskDurationLabel(task) {
+    const end = task.completedAt || Date.now();
+    const seconds = Math.max(0, Math.floor((end - task.startedAt) / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
   }
 
   function createWorkingLogoCanvas() {
@@ -424,15 +432,15 @@
     title.textContent = task.title;
     identity.append(title);
     subagentDetailIdentity.append(identity);
-    const phase = task.state === 'done' ? 'Worked' : task.state === 'thinking' ? 'Thinking' : 'Working';
-    subagentRuntime.innerHTML = `${phase} for ${elapsedLabel(task)} <span aria-hidden="true">›</span>`;
+    const phase = task.state === 'done' ? 'worked' : task.state === 'thinking' ? 'thinking' : 'working';
+    subagentRuntime.innerHTML = `${phase} for ${taskDurationLabel(task)} <span aria-hidden="true">›</span>`;
     subagentDetailContent.replaceChildren();
     const status = document.createElement('p');
     status.className = 'subagent-detail-status';
     status.textContent = task.state === 'done' && task.detail === 'Completed in the document'
       ? 'Completed in From Dots to Direction'
       : task.detail;
-    subagentDetailContent.append(status);
+    if (task.state !== 'done' || !task.resultTitle) subagentDetailContent.append(status);
     if (task.state === 'done' && task.resultTitle) {
       const heading = document.createElement('h3');
       heading.textContent = task.resultTitle;
@@ -513,6 +521,7 @@
     marker.classList.add('document-subagent-state', `is-${state}`);
     target.prepend(marker);
     task.documentMarker = marker;
+    positionStatusAtDocumentGutter(marker, target);
     const anchor = task.documentAnchor;
     if (anchor instanceof Element && anchor.isConnected && anchor !== target) {
       const targetRect = target.getBoundingClientRect();
@@ -562,6 +571,7 @@
       : config.documentTarget instanceof Element ? config.documentTarget : task.targets[0];
     if (documentTarget) attachDocumentTaskState(task, documentTarget, 'thinking', 'Thinking');
     renderSubagentLists();
+    showSubagentStartInMainChat(task);
     return id;
   }
 
@@ -850,7 +860,7 @@
     syncPromptIntent(mainPromptInput, mainPromptIntent, mainPromptIntentOverride);
   }
 
-  function openMainPrompt(anchorBlock = null) {
+  function openMainPrompt(anchorBlock = null, insertionRange = null) {
     if (!selectionPrompt.hidden || !selectionReview.hidden) return;
     hideAgentShortcutHint();
     const host = document.createElement('section');
@@ -868,6 +878,7 @@
       else documentPage.append(host);
     }
     mainPromptAnchorBlock = host;
+    mainPromptInsertionRange = isInteractionB && insertionRange ? insertionRange.cloneRange() : null;
     host.append(mainPrompt);
     dismissGuide();
     mainPromptIntentOverride = null;
@@ -889,6 +900,7 @@
     mainPromptInput.value = '';
     mainPromptIntentOverride = null;
     mainPromptAnchorBlock = null;
+    mainPromptInsertionRange = null;
     const restoredBlock = mainPromptReplacedBlock;
     mainPromptReplacedBlock = null;
     syncMainPromptState();
@@ -945,7 +957,7 @@
     if (!block?.container?.isConnected) return;
     block.cancelResize?.();
 
-    const { container, card, controls, anchorButton, logoButton } = block;
+    const { container, card, controls, anchorButton, logoButton, statusElement } = block;
     const startingHeight = card.getBoundingClientRect().height;
     card.style.height = `${startingHeight}px`;
     container.classList.toggle('is-expanded', shouldExpand);
@@ -954,7 +966,7 @@
     anchorButton.setAttribute('aria-label', shouldExpand ? 'Collapse generated content' : 'Review generated content');
     logoButton.setAttribute('aria-expanded', String(shouldExpand));
     logoButton.setAttribute('aria-label', shouldExpand ? 'Collapse generated content' : 'Review generated content');
-    if (shouldExpand) clearAiTaskStatusDot(logoButton);
+    if (shouldExpand) clearAiTaskStatusDot(statusElement);
 
     card.style.height = 'auto';
     const targetHeight = card.scrollHeight;
@@ -1017,6 +1029,11 @@
     anchorButton.className = 'ai-working-block-anchor inline-subagent-anchor';
     anchorButton.setAttribute('aria-label', 'Open associated subagent');
     anchorButton.setAttribute('aria-expanded', 'false');
+    const statusElement = isInteractionB ? createAiTaskStatus() : logoButton;
+    if (isInteractionB) {
+      populateAiChip(anchorButton);
+      anchorButton.append(statusElement);
+    }
     const copy = document.createElement('div');
     copy.className = 'ai-working-block-copy';
     card.append(copy);
@@ -1030,7 +1047,7 @@
     const chat = document.createElement('button');
     chat.type = 'button';
     chat.className = 'ai-working-block-chat';
-    chat.innerHTML = '<img src="assets/figma/selection-chat.svg" alt=""><span>Expand to chat</span>';
+    chat.innerHTML = `<img src="assets/figma/selection-chat.svg" alt=""><span>${isInteractionB ? 'Ask in chat' : 'Expand to chat'}</span>`;
     const divider = document.createElement('span');
     divider.className = 'ai-working-block-divider';
     const dismiss = document.createElement('button');
@@ -1046,9 +1063,10 @@
     actions.append(chat, divider, dismiss, accept);
     controls.append(actions);
     card.append(controls);
-    container.append(logoButton, anchorButton, card);
+    if (!isInteractionB) container.append(logoButton);
+    container.append(anchorButton, card);
 
-    const block = { container, logoButton, anchorButton, card, copy, controls, chat, dismiss, accept, text: '', taskId: null };
+    const block = { container, logoButton, statusElement, anchorButton, card, copy, controls, chat, dismiss, accept, text: '', taskId: null };
     const openBlock = () => {
       hideInlineSubagentTooltip();
       if (block.taskId) openSubagentDetail(block.taskId);
@@ -1072,13 +1090,13 @@
     block.container.dataset.state = state;
     if (state === 'working') {
       block.copy.textContent = text.replace(/\n\s*\n/g, '\n');
-      block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
+      if (!isInteractionB) block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
     }
     if (state === 'done') {
       block.copy.textContent = text.replace(/\n\s*\n/g, '\n');
-      block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
-      completeAiTaskStatus(block.logoButton);
-      block.logoButton.setAttribute('aria-label', 'Review generated content');
+      if (!isInteractionB) block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
+      completeAiTaskStatus(block.statusElement);
+      if (!isInteractionB) block.logoButton.setAttribute('aria-label', 'Review generated content');
       block.anchorButton.setAttribute('aria-label', 'Review generated content');
       block.anchorButton.setAttribute('aria-expanded', 'false');
     }
@@ -1106,10 +1124,13 @@
     createInsertedParagraphs(result).forEach((paragraph) => resultCopy.append(paragraph));
     response.append(introduction, resultCopy);
 
-    agentAskChatBlock.replaceChildren(request, response, createAgentMessageActions('Regenerate response'));
+    const entry = document.createElement('article');
+    entry.className = 'agent-chat-task';
+    entry.append(request, response, createAgentMessageActions('Regenerate response'));
+    agentAskChatBlock.append(entry);
     agentAskChatBlock.hidden = false;
     window.requestAnimationFrame(() => {
-      agentConversation.scrollTo({ top: 0, behavior: 'smooth' });
+      agentConversation.scrollTo({ top: agentConversation.scrollHeight, behavior: 'smooth' });
       chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
     });
     showToast('Conversation sent to Agent Chat');
@@ -1250,7 +1271,7 @@
     });
     if (isBlockResult) {
       insertionTarget.taskId = taskId;
-      insertionTarget.anchorButton.textContent = sourcePrompt || customTitle || definition.title;
+      if (!isInteractionB) insertionTarget.anchorButton.textContent = sourcePrompt || customTitle || definition.title;
       const task = subagentTasks.get(taskId);
       task.inlineAnchor = insertionTarget.anchorButton;
       insertionTarget.anchorButton.addEventListener('mouseenter', () => showInlineSubagentTooltip(taskId));
@@ -1354,7 +1375,9 @@
     const anchorRect = task.inlineAnchor.getBoundingClientRect();
     const workspaceRect = documentWorkspace.getBoundingClientRect();
     const maxLeft = workspaceRect.width - inlineSubagentTooltip.offsetWidth - 12;
-    inlineSubagentTooltip.style.left = `${clamp(anchorRect.left - workspaceRect.left, 12, maxLeft)}px`;
+    const preferredLeft = anchorRect.left - workspaceRect.left
+      + (anchorRect.width - inlineSubagentTooltip.offsetWidth) / 2;
+    inlineSubagentTooltip.style.left = `${clamp(preferredLeft, 12, maxLeft)}px`;
     inlineSubagentTooltip.style.top = `${anchorRect.top - workspaceRect.top - inlineSubagentTooltip.offsetHeight - 8}px`;
   }
 
@@ -1364,7 +1387,13 @@
     const anchor = task.inlineAnchor;
     task.statusElement?.remove();
     task.statusElement = null;
-    if (anchor.classList.contains('is-selection-anchor')) {
+    if (!task.statusHost?.querySelector('.inline-subagent-margin-status')) {
+      task.statusHost?.classList.remove('inline-subagent-status-host');
+    }
+    task.statusHost = null;
+    if (isInteractionB && anchor.classList.contains('ai-chip')) {
+      anchor.remove();
+    } else if (anchor.classList.contains('is-selection-anchor')) {
       if (anchor.matches('span')) anchor.replaceWith(...anchor.childNodes);
       else anchor.classList.remove('inline-subagent-anchor', 'is-selection-anchor');
     } else {
@@ -1376,6 +1405,32 @@
     showToast('AI task resolved');
   }
 
+  function positionStatusAtDocumentGutter(status, host) {
+    if (isInteractionB || !status?.isConnected || !host?.isConnected) return;
+    const pageRect = documentPage.getBoundingClientRect();
+    const pagePadding = Number.parseFloat(getComputedStyle(documentPage).paddingLeft) || 0;
+    const contentLeft = pageRect.left + pagePadding;
+    status.style.left = `${contentLeft - host.getBoundingClientRect().left - 34}px`;
+  }
+
+  function positionInlineSubagentMarginStatus(task) {
+    const anchor = task.inlineAnchor;
+    const status = task.statusElement;
+    const host = task.statusHost;
+    if (!anchor?.isConnected || !status?.isConnected || !host?.isConnected) return;
+    const lineRect = anchor.getClientRects()[0] || anchor.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    positionStatusAtDocumentGutter(status, host);
+    status.style.top = `${Math.max(0, lineRect.top - hostRect.top + (lineRect.height - 24) / 2)}px`;
+  }
+
+  function positionInlineSubagentMarginStatuses() {
+    subagentTasks.forEach((task) => {
+      positionInlineSubagentMarginStatus(task);
+      positionStatusAtDocumentGutter(task.documentMarker, task.documentTarget);
+    });
+  }
+
   function linkInlineSubagentAnchor(anchor, taskId) {
     const task = subagentTasks.get(taskId);
     anchor.classList.add('inline-subagent-anchor');
@@ -1384,7 +1439,20 @@
     anchor.setAttribute('role', 'button');
     anchor.setAttribute('aria-label', 'Open associated subagent');
     const status = createAiTaskStatus();
-    anchor.prepend(status);
+    const statusHost = !isInteractionB && anchor.matches('span')
+      ? anchor.closest('p, li, blockquote, h1, h2, figcaption')
+      : null;
+    if (statusHost) {
+      status.classList.add('inline-subagent-margin-status');
+      statusHost.classList.add('inline-subagent-status-host');
+      statusHost.append(status);
+      if (task) task.statusHost = statusHost;
+      positionInlineSubagentMarginStatus({ inlineAnchor: anchor, statusElement: status, statusHost });
+    } else if (isInteractionB && anchor.classList.contains('ai-chip')) anchor.append(status);
+    else {
+      anchor.prepend(status);
+      positionStatusAtDocumentGutter(status, anchor);
+    }
     if (task) task.statusElement = status;
     anchor.addEventListener('pointerdown', (event) => event.preventDefault());
     anchor.addEventListener('mouseenter', () => showInlineSubagentTooltip(taskId));
@@ -1406,6 +1474,23 @@
     });
   }
 
+  function populateAiChip(chip) {
+    chip.classList.add('ai-chip');
+    const icon = document.createElement('img');
+    icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
+    icon.alt = '';
+    const label = document.createElement('span');
+    label.textContent = 'Dot';
+    chip.replaceChildren(icon, label);
+  }
+
+  function createAiChip() {
+    const chip = document.createElement('span');
+    chip.contentEditable = 'false';
+    populateAiChip(chip);
+    return chip;
+  }
+
   function launchLinkedSubagent(prompt, anchor, selectedText = '') {
     const resultText = searchAnswerFor(prompt, selectedText).summary;
     const title = titleFromPrompt(prompt);
@@ -1415,7 +1500,7 @@
       targets: anchor,
       documentTarget: false,
       documentAnchor: anchor,
-      resultTitle: 'Research findings',
+      resultTitle: /competitor|竞品/i.test(prompt) ? 'Competitor Search Results' : 'Research findings',
       resultText,
       sourcePrompt: prompt,
     });
@@ -1437,24 +1522,45 @@
 
   function runMainLinkedSubagent(prompt) {
     const host = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
+    const replacedBlock = mainPromptReplacedBlock;
+    const insertionRange = mainPromptInsertionRange;
     mainPromptAnchorBlock = null;
     mainPromptReplacedBlock = null;
+    mainPromptInsertionRange = null;
     mainPrompt.hidden = true;
     documentWorkspace.append(mainPrompt);
     mainPromptInput.value = '';
     mainPromptIntentOverride = null;
     closePromptIntentMenus();
     syncMainPromptState();
-    const paragraph = document.createElement('p');
-    paragraph.className = 'inline-subagent-placeholder';
-    const anchor = document.createElement('span');
-    anchor.textContent = prompt;
-    anchor.contentEditable = 'false';
-    paragraph.append(anchor);
-    if (host) host.replaceWith(paragraph);
-    else documentPage.append(paragraph);
-    launchLinkedSubagent(prompt, anchor);
-    routeSearchToAgentSession(prompt);
+    let anchor;
+    if (isInteractionB) {
+      anchor = createAiChip();
+      if (host && replacedBlock) {
+        replacedBlock.replaceChildren(anchor);
+        host.replaceWith(replacedBlock);
+      } else if (insertionRange?.startContainer?.isConnected && documentPage.contains(insertionRange.startContainer)) {
+        host?.remove();
+        insertionRange.insertNode(anchor);
+      } else {
+        const paragraph = document.createElement('p');
+        paragraph.className = 'inline-subagent-chip-line';
+        paragraph.append(anchor);
+        if (host) host.replaceWith(paragraph);
+        else documentPage.append(paragraph);
+      }
+    } else {
+      const paragraph = document.createElement('p');
+      paragraph.className = 'inline-subagent-placeholder';
+      anchor = document.createElement('span');
+      anchor.textContent = prompt;
+      anchor.contentEditable = 'false';
+      paragraph.append(anchor);
+      if (host) host.replaceWith(paragraph);
+      else documentPage.append(paragraph);
+    }
+    const taskId = launchLinkedSubagent(prompt, anchor);
+    routeSearchToAgentSession(taskId);
     showToast('Subagent started');
   }
 
@@ -1462,6 +1568,7 @@
     const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
     mainPromptAnchorBlock = null;
     mainPromptReplacedBlock = null;
+    mainPromptInsertionRange = null;
     mainPrompt.hidden = true;
     documentWorkspace.append(mainPrompt);
     mainPromptInput.value = '';
@@ -1599,6 +1706,42 @@
     return actions;
   }
 
+  function showSubagentStartInMainChat(task) {
+    const entry = document.createElement('article');
+    entry.className = 'agent-chat-task';
+    entry.dataset.taskId = task.id;
+    if (task.sourcePrompt) {
+      const requestGroup = document.createElement('div');
+      requestGroup.className = 'agent-search-request';
+      const request = document.createElement('div');
+      request.className = 'user-message';
+      request.textContent = task.sourcePrompt;
+      requestGroup.append(request);
+      entry.append(requestGroup);
+    }
+
+    const message = document.createElement('div');
+    message.className = 'assistant-message subagent-start-message';
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'subagent-chat-link';
+    link.setAttribute('aria-label', `Open ${task.title} subagent`);
+    const icon = document.createElement('img');
+    icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
+    icon.alt = '';
+    const name = document.createElement('span');
+    name.textContent = 'Dotwise';
+    link.append(icon, name);
+    link.addEventListener('click', () => openSubagentDetail(task.id));
+    const copy = document.createElement('span');
+    copy.textContent = 'subagent begins working';
+    message.append(link, copy);
+    entry.append(message, createAgentMessageActions());
+    agentAskChatBlock.append(entry);
+    agentAskChatBlock.hidden = false;
+    task.chatEntry = entry;
+  }
+
   function searchAnswerFor(prompt, quotedText = '') {
     const lower = prompt.toLowerCase();
     if (/(notion|笔记|note)/.test(lower)) {
@@ -1612,13 +1755,12 @@
     return {
       summary: quotedText
         ? 'I carried the selected passage into this search so the findings stay grounded in the part of the document you were working on. Here is a concise research pass you can continue in this session.'
-        : 'I moved this request into the main Agent session because it needs outside information. Here is a concise research pass you can keep exploring without interrupting the document draft.',
+        : 'I reviewed this request in a separate subagent so the document draft stays uninterrupted. Here is a concise research pass you can continue exploring.',
       points: ['Start with the most recent primary sources.', 'Compare at least two independent references.', 'Bring only the verified findings back into the document.'],
     };
   }
 
-  function routeSearchToAgentSession(prompt, quote = null) {
-    const runId = ++routedSearchRun;
+  function routeSearchToAgentSession(taskId, quote = null) {
     setAgentPanelCollapsed(false, { focus: false });
     closeSubagentWorkspace();
     const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
@@ -1631,41 +1773,12 @@
     mainPromptIntentOverride = null;
     syncMainPromptState();
     syncComposerQuote(quote);
-
-    const requestGroup = document.createElement('div');
-    requestGroup.className = 'agent-search-request';
-    if (quote) requestGroup.append(createAgentQuoteChip(quote.text, quote.target));
-    const request = document.createElement('div');
-    request.className = 'user-message';
-    request.textContent = prompt;
-    requestGroup.append(request);
-    const thinking = document.createElement('div');
-    thinking.className = 'assistant-message agent-search-answer';
-    thinking.textContent = 'Searching and checking relevant sources…';
-    agentAskChatBlock.replaceChildren(requestGroup, thinking);
-    agentAskChatBlock.hidden = false;
+    const task = subagentTasks.get(taskId);
+    const requestGroup = task?.chatEntry?.querySelector('.agent-search-request');
+    if (quote && requestGroup) requestGroup.prepend(createAgentQuoteChip(quote.text, quote.target));
     agentPanel.classList.add('is-receiving-search');
     window.setTimeout(() => agentPanel.classList.remove('is-receiving-search'), 520);
-    agentConversation.scrollTo({ top: 0, behavior: 'smooth' });
-
-    window.setTimeout(() => {
-      if (runId !== routedSearchRun) return;
-      const answer = searchAnswerFor(prompt, quote?.text || '');
-      const response = document.createElement('div');
-      response.className = 'assistant-message agent-search-answer';
-      const copy = document.createElement('p');
-      copy.textContent = answer.summary;
-      const list = document.createElement('ul');
-      list.className = 'agent-search-sources';
-      answer.points.forEach((point) => {
-        const item = document.createElement('li');
-        item.textContent = point;
-        list.append(item);
-      });
-      response.append(copy, list);
-      agentAskChatBlock.replaceChildren(requestGroup, response, createAgentMessageActions());
-      showToast('Search continued in Agent Chat');
-    }, 850);
+    agentConversation.scrollTo({ top: agentConversation.scrollHeight, behavior: 'smooth' });
   }
 
   function routeSelectionSearchToAgentSession(prompt) {
@@ -1681,12 +1794,18 @@
       text: selectionRequest,
       target: selectionMarker || selectionAnchor || selectableCopy,
     };
+    let chip = null;
+    if (isInteractionB) {
+      chip = createAiChip();
+      if (selectionMarker?.matches('span')) selectionMarker.insertAdjacentElement('afterend', chip);
+      else quote.target.append(chip);
+    }
     storedRange = null;
     selectionAnchor = null;
     selectionMarker = null;
     selectionRequest = '';
-    routeSearchToAgentSession(prompt, quote);
-    launchLinkedSubagent(prompt, quote.target, quote.text);
+    const taskId = launchLinkedSubagent(prompt, chip || quote.target, quote.text);
+    routeSearchToAgentSession(taskId, quote);
   }
 
   function submitMainAgentPrompt(prompt, intent = classifyAgentIntent(prompt)) {
@@ -1859,10 +1978,11 @@
       kind: 'selection-edit',
       accent: 'violet',
       targets: generatedPreview,
-      documentTarget: selectionStateTarget,
+      documentTarget: isInteractionB ? false : selectionStateTarget,
       documentAnchor: selectionMarker || selectionAnchor,
       resultTitle: 'Selected text updated',
       resultText: completionText.trim(),
+      sourcePrompt: request,
     });
     selectionTaskId = taskId;
 
@@ -1896,7 +2016,11 @@
     selectionRequest = '';
     if (selectionTaskId) {
       const task = subagentTasks.get(selectionTaskId);
-      if (task) clearDocumentTaskState(task);
+      if (task) {
+        clearDocumentTaskState(task);
+        task.inlineAnchor = null;
+        task.statusElement = null;
+      }
       selectionTaskId = null;
     }
   }
@@ -2013,6 +2137,16 @@
     if (event.target === documentSurface) {
       documentSurface.focus({ preventScroll: true });
     }
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (event.target.closest?.('.ai-working-block')) return;
+    subagentTasks.forEach((task) => {
+      const block = task.aiBlock;
+      if (block?.container?.isConnected && block.container.classList.contains('is-expanded')) {
+        animateAiWorkingBlockResize(block, false);
+      }
+    });
   });
 
   documentSurface.addEventListener('click', (event) => {
@@ -2228,7 +2362,7 @@
     if (atInvocation && mainPrompt.hidden && selectionPrompt.hidden && selectionReview.hidden) {
       removeTabSuggestion();
       rememberCaretPoint(atInvocation);
-      openMainPrompt(atInvocation.block);
+      openMainPrompt(atInvocation.block, atInvocation.range);
       return;
     }
     scheduleTabSuggestion();
@@ -2272,6 +2406,12 @@
   });
 
   window.addEventListener('resize', positionSubagentMenu);
+  window.addEventListener('resize', positionInlineSubagentMarginStatuses);
+  documentPage.addEventListener('input', () => window.requestAnimationFrame(positionInlineSubagentMarginStatuses));
+  const inlineSubagentStatusObserver = new ResizeObserver(() => {
+    window.requestAnimationFrame(positionInlineSubagentMarginStatuses);
+  });
+  inlineSubagentStatusObserver.observe(documentPage);
   window.addEventListener('resize', scheduleSelectionReviewPosition);
   window.addEventListener('resize', updateAgentShortcutHint);
   documentSurface.addEventListener('scroll', scheduleSelectionReviewPosition, { passive: true });
@@ -2282,7 +2422,10 @@
     mainAgentTab.focus({ preventScroll: true });
   });
 
-  subagentBack.addEventListener('click', closeSubagentWorkspace);
+  subagentBack.addEventListener('click', () => {
+    closeSubagentWorkspace();
+    mainAgentTab.focus({ preventScroll: true });
+  });
   closeSubagentDetail?.addEventListener('click', closeSubagentWorkspace);
 
   document.addEventListener('pointerdown', (event) => {
@@ -2319,8 +2462,8 @@
     });
     const detailTask = subagentTasks.get(activeSubagentDetailId);
     if (detailTask) {
-      const phase = detailTask.state === 'done' ? 'Worked' : detailTask.state === 'thinking' ? 'Thinking' : 'Working';
-      subagentRuntime.innerHTML = `${phase} for ${elapsedLabel(detailTask)} <span aria-hidden="true">›</span>`;
+      const phase = detailTask.state === 'done' ? 'worked' : detailTask.state === 'thinking' ? 'thinking' : 'working';
+      subagentRuntime.innerHTML = `${phase} for ${taskDurationLabel(detailTask)} <span aria-hidden="true">›</span>`;
     }
   }, 1000);
 })();

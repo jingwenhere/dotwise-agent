@@ -1146,6 +1146,62 @@ textarea:focus-visible,
 .inline-subagent-anchor:hover { text-decoration-color: #646464; }
 .inline-subagent-anchor:focus-visible { outline: 2px solid #646464; outline-offset: 3px; }
 
+.inline-subagent-status-host { position: relative; }
+.inline-subagent-margin-status {
+  position: absolute;
+  left: -34px;
+  pointer-events: none;
+  user-select: none;
+}
+
+html[data-interaction="b"] .ai-chip.inline-subagent-anchor {
+  position: relative;
+  display: inline-flex;
+  width: max-content;
+  height: 20px;
+  align-items: center;
+  gap: 4px;
+  margin-inline: 2px;
+  padding-inline: 2px;
+  overflow: visible;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+  vertical-align: -3px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+html[data-interaction="b"] .ai-chip > img { display: block; width: 16px; height: 16px; flex: 0 0 16px; border-radius: 4px; }
+html[data-interaction="b"] .ai-chip > .ai-task-status {
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border: .5px solid rgba(0, 0, 0, .1);
+  border-radius: 4px;
+  background: #fafafa;
+}
+html[data-interaction="b"] .ai-chip > .ai-task-status .ai-working-logo { width: 16px; height: 16px; }
+html[data-interaction="b"] .ai-chip > .ai-task-status.is-done {
+  top: -3px;
+  right: -3px;
+  left: auto;
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 50%;
+}
+html[data-interaction="b"] .ai-chip > .ai-task-status.is-done::after { width: 5px; height: 5px; }
+html[data-interaction="b"] .ai-chip > .ai-task-status.is-seen { display: none; }
+html[data-interaction="b"] .ai-chip:hover { background: rgba(0, 0, 0, .09); }
+html[data-interaction="b"] .ai-chip:focus-visible { outline: 2px solid rgba(0, 0, 0, .46); outline-offset: 2px; }
+
 .inline-subagent-tooltip {
   position: absolute;
   z-index: 50;
@@ -1210,6 +1266,12 @@ textarea:focus-visible,
   margin: 16px 0 16px -34px;
 }
 
+html[data-interaction="b"] .ai-working-block {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  margin-left: 0;
+}
+
 .ai-working-block-logo {
   position: relative;
   grid-column: 1;
@@ -1245,6 +1307,9 @@ textarea:focus-visible,
   color: #a5a5a5;
   text-decoration-color: #d2d2d2;
 }
+
+html[data-interaction="b"] .ai-working-block-anchor,
+html[data-interaction="b"] .ai-working-block-card { grid-column: 1; }
 
 .ai-working-block-card {
   position: relative;
@@ -1282,6 +1347,11 @@ textarea:focus-visible,
 }
 
 .ai-working-block.is-expanded .ai-working-block-anchor { display: none; }
+html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-anchor.ai-chip { display: inline-flex; }
+html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card {
+  grid-row: 2;
+  margin-top: 8px;
+}
 
 .ai-working-block.is-expanded .ai-working-block-copy {
   display: block;
@@ -1593,6 +1663,41 @@ textarea:focus-visible,
 }
 
 .agent-ask-chat-block[hidden] { display: none; }
+
+.agent-chat-task {
+  display: grid;
+  gap: 8px;
+}
+
+.subagent-start-message {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px;
+}
+
+.subagent-chat-link {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background: transparent;
+  font: inherit;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.subagent-chat-link img { display: block; width: 16px; height: 16px; }
+.subagent-chat-link:hover { background: var(--bg-subtle); }
+.subagent-chat-link:focus-visible { outline: 2px solid rgba(0, 0, 0, .46); outline-offset: 2px; }
+.agent-chat-task > .message-actions { padding-left: 8px; }
 
 .agent-search-request {
   display: flex;
@@ -2389,7 +2494,7 @@ textarea:focus-visible,
   gap: 8px;
 }
 
-.subagent-detail-identity strong { overflow: hidden; font-size: 15px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.subagent-detail-identity strong { overflow: hidden; font-size: 17px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 
 .subagent-runtime {
   justify-self: start;
@@ -2412,7 +2517,7 @@ textarea:focus-visible,
   scrollbar-width: thin;
 }
 
-.subagent-detail-content h3 { margin: 0 0 8px; font-size: 14px; line-height: 20px; }
+.subagent-detail-content h3 { margin: 0 0 17px; font-size: 17px; font-weight: 600; line-height: 20px; }
 .subagent-detail-content p { margin: 0 0 12px; white-space: pre-wrap; }
 .subagent-detail-status { color: var(--text-secondary); }
 
