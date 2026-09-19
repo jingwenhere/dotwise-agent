@@ -1,2470 +1,1077 @@
 (() => {
-  const cuelume = import('https://cdn.jsdelivr.net/npm/cuelume@0.2.2/dist/index.js')
-    .catch(() => null);
-
-  const requestedInteraction = new URLSearchParams(window.location.search).get('interaction');
-  const interaction = requestedInteraction === 'a' || requestedInteraction === 'b'
-    ? requestedInteraction
-    : document.documentElement.dataset.defaultInteraction || 'a';
-  const isInteractionB = interaction === 'b';
-  document.documentElement.dataset.interaction = interaction;
-  document.querySelectorAll('[data-interaction-link]').forEach((link) => {
-    if (link.dataset.interactionLink === interaction) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
-
-  const documentSurface = document.getElementById('documentSurface');
+  const contentShell = document.getElementById('contentShell');
+  const agentPanel = document.getElementById('agentPanel');
+  const collapseAgentPanel = document.getElementById('collapseAgentPanel');
+  const panelClosedLabel = document.getElementById('panelClosedLabel');
   const documentPage = document.getElementById('documentPage');
-  const documentWorkspace = document.querySelector('.document-workspace');
-  const selectableCopy = document.getElementById('selectableCopy');
-  const aiCopyRow = document.getElementById('aiCopyRow');
-  const aiCopyContinuation = document.getElementById('aiCopyContinuation');
-  const subagentDiarySection = document.getElementById('subagentDiarySection');
-  const subagentDiaryCopy = document.getElementById('subagentDiaryCopy');
-  const reviewStatus = document.getElementById('reviewStatus');
-  const contentShell = document.querySelector('.content-shell');
-  const agentPanel = document.querySelector('.agent-panel');
-  const openAgentPanelButton = document.getElementById('openAgentPanel');
-  const collapseAgentPanelButton = document.getElementById('collapseAgentPanel');
-  const agentConversation = document.getElementById('agentConversation');
-  const mainAgentTab = document.getElementById('mainAgentTab');
-  const subagentPanelTab = document.getElementById('subagentPanelTab');
-  const reviewSuggestionCard = document.getElementById('reviewSuggestionCard');
-  const reviewSuggestionCount = document.getElementById('reviewSuggestionCount');
-  const reviewSuggestionCopy = document.getElementById('reviewSuggestionCopy');
-  const sendAllReview = document.getElementById('sendAllReview');
-  const closeReviewSuggestion = document.getElementById('closeReviewSuggestion');
-  const reviewChatBlock = document.getElementById('reviewChatBlock');
-  const agentAskChatBlock = document.getElementById('agentAskChatBlock');
+  const documentSurface = document.getElementById('documentSurface');
+  const introCopy = document.getElementById('introCopy');
+  const captureLead = document.getElementById('captureLead');
+  const conversation = document.getElementById('conversation');
+  const emptySuggestions = document.getElementById('emptySuggestions');
   const chatComposer = document.getElementById('chatComposer');
-  const composerQuoteChip = document.getElementById('composerQuoteChip');
-  const composerQuoteLabel = document.getElementById('composerQuoteLabel');
-
-  const mainPrompt = document.getElementById('mainPrompt');
-  const mainPromptInput = document.getElementById('mainPromptInput');
-  const mainPromptIntent = document.getElementById('mainPromptIntent');
-  const mainPromptSubmit = mainPrompt.querySelector('.prompt-submit');
-  const selectionPrompt = document.getElementById('selectionPrompt');
-  const selectionPromptInput = document.getElementById('selectionPromptInput');
-  const selectionPromptIntent = document.getElementById('selectionPromptIntent');
-  const selectionReview = document.getElementById('selectionReview');
-  const selectionReviewCopy = document.getElementById('selectionReviewCopy');
-  const confirmSelection = document.getElementById('confirmSelection');
-  const revertSelection = document.getElementById('revertSelection');
-  const agentShortcutHint = document.getElementById('agentShortcutHint');
-  const inlineSubagentTooltip = document.getElementById('inlineSubagentTooltip');
-  const inlineSubagentTooltipLabel = document.getElementById('inlineSubagentTooltipLabel');
-  const inlineSubagentResolve = document.getElementById('inlineSubagentResolve');
-
-  const subagentEntry = document.getElementById('subagentEntry');
+  const composerInput = document.getElementById('composerInput');
+  const contextBar = document.getElementById('contextBar');
+  const modeTrigger = document.getElementById('modeTrigger');
+  const modeLabel = document.getElementById('modeLabel');
+  const modeMenu = document.getElementById('modeMenu');
+  const sessionTrigger = document.getElementById('sessionTrigger');
+  const sessionTitle = document.getElementById('sessionTitle');
+  const newChatButton = document.getElementById('newChatButton');
+  const completionDot = document.getElementById('completionDot');
   const subagentMenu = document.getElementById('subagentMenu');
-  const subagentMenuActiveCount = document.getElementById('subagentMenuActiveCount');
-  const subagentMenuDoneCount = document.getElementById('subagentMenuDoneCount');
-  const subagentMenuActiveList = document.getElementById('subagentMenuActiveList');
-  const subagentMenuDoneList = document.getElementById('subagentMenuDoneList');
-  const subagentMenuEmptyActive = document.getElementById('subagentMenuEmptyActive');
-  const subagentMenuEmptyDone = document.getElementById('subagentMenuEmptyDone');
-  const subagentPopover = document.getElementById('subagentPopover');
-  const agentCount = document.getElementById('agentCount');
-  const activeCount = document.getElementById('activeCount');
   const activeTaskList = document.getElementById('activeTaskList');
-  const emptyActive = document.getElementById('emptyActive');
-  const doneCount = document.getElementById('doneCount');
   const doneTaskList = document.getElementById('doneTaskList');
-  const emptyDone = document.getElementById('emptyDone');
-  const subagentListView = document.getElementById('subagentListView');
-  const subagentDetailView = document.getElementById('subagentDetailView');
-  const subagentBack = document.getElementById('subagentBack');
-  const closeSubagentDetail = document.getElementById('closeSubagentDetail');
-  const subagentDetailIdentity = document.getElementById('subagentDetailIdentity');
-  const subagentRuntime = document.getElementById('subagentRuntime');
-  const subagentDetailContent = document.getElementById('subagentDetailContent');
-
-  const interactionGuide = document.getElementById('interactionGuide');
+  const activeTaskCount = document.getElementById('activeTaskCount');
+  const doneTaskCount = document.getElementById('doneTaskCount');
   const toast = document.getElementById('toast');
-  const mainAgentResult = 'A useful note helps you capture the signal, connect it to context, and turn it into a next move. It keeps enough texture to make the thought recognizable later, while leaving enough space for new connections to change its meaning. Over time, those small connections become a direction you can act on.';
 
-  let lastDocumentPoint = { x: 390, y: 390 };
-  let mainPromptAnchorBlock = null;
-  let mainPromptInsertionRange = null;
-  let mainPromptReplacedBlock = null;
-  let mainPromptIntentOverride = null;
-  let storedRange = null;
-  let selectionMarker = null;
-  let generatedPreview = null;
-  let selectionAnchor = null;
-  let selectionRequest = '';
-  let selectionPromptEngaged = false;
-  let selectionPromptIntentOverride = null;
-  let documentSelectionPointerActive = false;
-  let documentSelectionKeyboardActive = false;
-  let selectionReviewPositionFrame = 0;
-  let selectionRun = 0;
-  let selectionTaskId = null;
+  const taskStore = new Map();
+  const messageStore = [];
+  let mode = 'edit';
+  let taskSequence = 0;
+  let messageSequence = 0;
+  let activeTaskId = null;
+  let selectionText = '';
+  let selectionRange = null;
+  let panelCollapsed = false;
   let toastTimer = null;
-  let cancelSelectionStream = null;
-  let activeTabSuggestion = null;
-  let tabSuggestionTimer = null;
-  let highlightTimer = null;
-  const subagentTasks = new Map();
-  let subagentTaskSequence = 0;
-  let latestSubagentTaskId = null;
-  let activeSubagentDetailId = null;
-  let selectedSubagentTaskId = null;
-  let reviewRemaining = 0;
-  let pendingReviewSuggestions = [];
-  let reviewHighlightTimer = null;
-  let activeReviewDiff = null;
-  let autoReviewTimer = null;
-  let activeAgentQuote = null;
-  let quoteHighlightTimer = null;
-  let activeShortcutBlock = null;
-  let tooltipTaskId = null;
-  let tooltipHideTimer = null;
+  const targetFlashTimers = new WeakMap();
+  const WORKING_PREVIEW_MS = 2400;
 
-  const reviewDefinitions = [
-    {
-      id: 'quote',
-      target: document.getElementById('reviewTargetQuote'),
-      label: 'Clarity',
-      doneTitle: 'The sentence has been revised',
-      rationale: 'Tighten the quote so the main idea lands faster.',
-      chatSummary: 'I tightened the pull quote so its central idea lands more directly.',
-      suggestion: '“A useful note gives an unfinished thought somewhere to go.”',
-      diffParts: [
-        { type: 'same', text: '“A useful note ' },
-        { type: 'delete', text: 'does not preserve a thought. It gives the ' },
-        { type: 'insert', text: 'gives an unfinished ' },
-        { type: 'same', text: 'thought somewhere to go.”' },
-      ],
-    },
-    {
-      id: 'heading',
-      target: document.getElementById('reviewTargetHeading'),
-      label: 'Structure',
-      doneTitle: 'The spelling corrected',
-      rationale: 'Make the heading describe both capture and the next action.',
-      chatSummary: 'I made the section heading more specific and action-oriented.',
-      suggestion: '1. Capture, then connect',
-      diffParts: [
-        { type: 'same', text: '1. Capture' },
-        { type: 'delete', text: ' the dots' },
-        { type: 'insert', text: ', then connect' },
-      ],
-    },
-    {
-      id: 'lead',
-      target: document.getElementById('reviewTargetLead'),
-      label: 'Conciseness',
-      doneTitle: 'Optimize the statement',
-      rationale: 'Remove repetition while preserving the practical guidance.',
-      chatSummary: 'I removed repetition from the opening while preserving its practical tone.',
-      suggestion: 'Capture first; refine later. Save the fragment before it becomes a polished story, then add context when you return.',
-      diffParts: [
-        { type: 'delete', text: 'The best capture system is deliberately incomplete. ' },
-        { type: 'insert', text: 'Capture first; refine later. ' },
-        { type: 'same', text: 'Save the fragment before ' },
-        { type: 'delete', text: 'your brain turns it into a polished story; context can come later.' },
-        { type: 'insert', text: 'it becomes a polished story, then add context when you return.' },
-      ],
-    },
-  ];
+  const copy = {
+    summaryResponse: 'Absolutely. We could add something to summarize this paragraph and make the intro easier for people to understand.',
+    summaryEdit: 'Ideas can flow with you freely in dotwise, making your ideas visible and clear.',
+    shorterResponse: 'We could edit this paragraph by making it more compact and remove repeated information to make it shorter.',
+    shorterEdit: 'Capture the fragment, then return with context.',
+    longerResponse: 'Absolutely. We can expand this idea while keeping the original document structure and formatting intact.',
+    longerEdit: 'Capture the fragment first, then return with context so the idea remains clear, useful, and easy to build on when you revisit it.',
+    researchResult: 'Search query: AI editing tools for documents and visual workspaces\nResults found: 24 · Most relevant: 4\n\nNotion AI\nNotion places AI actions close to the text users are working on. After selecting a passage, users can ask AI to rewrite, shorten, translate, or change its tone. The proposed text appears in context, with controls to accept it, discard it, or request another version. This keeps the original document visible while the user reviews the change.\n\nMiro AI\nMiro brings AI into a shared visual workspace. Users can turn a prompt into sticky notes, diagrams, or grouped ideas, then move and edit the generated objects on the board. Its approach is useful when the output needs to become part of a spatial workflow rather than remain in a chat response.\n\nFigJam AI\nFigJam focuses on helping teams start and organize collaborative sessions. AI can generate an initial board structure and assist with sorting ideas. The resulting content is presented as editable canvas objects, so users can continue working with familiar board interactions.\n\nCanva Magic Write\nCanva offers writing assistance inside a broader design workflow. Users can generate or revise copy while building visual content, reducing the need to switch between a writing tool and a design tool. The AI output still needs review for tone, accuracy, and fit within the layout.\n\nWhat this suggests for Dotwise\nThe strongest pattern is a short path from intent to editable content: invoke AI near the selected object, show progress without hiding the workspace, and let users inspect the result before applying it. For documents, a clear before-and-after review may matter most. For canvas objects, the generated result should remain movable and editable. In both cases, users should be able to reject an output without losing their original work.\n\nThis is mock search-result copy for UI design, not a verified competitor analysis.',
+  };
 
-  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+  function switchToAskIntent() {
+    return [{
+      label: 'Switch to Ask mode',
+      action: (record, button) => {
+        if (record.switchingToAsk) return;
+        // Subagent messages are rendered from task-scoped copies. Update the
+        // canonical message as well so reopening the task keeps the Ask result.
+        const sourceRecord = messageStore.find((item) => item.id === record.id) || record;
+        sourceRecord.switchingToAsk = true;
+        sourceRecord.intent = null;
+        button.closest('.intent-actions')?.remove();
+        setMode('ask');
+
+        // Keep the existing result in place while the Ask-mode continuation is generated.
+        const working = addWorkingMessage();
+        window.setTimeout(() => {
+          working.remove();
+          sourceRecord.mode = 'ask';
+          sourceRecord.text = copy.researchResult;
+          sourceRecord.undo = null;
+          sourceRecord.undone = false;
+          const article = conversation.querySelector(`[data-message-id="${record.id}"]`);
+          article?.replaceWith(renderMainRecord({ ...sourceRecord, subagentTaskId: null }));
+          scrollConversation();
+        }, WORKING_PREVIEW_MS);
+      },
+    }];
+  }
+
+  function switchToEditIntent() {
+    return [{
+      label: 'Switch to Edit mode',
+      action: (record, button) => {
+        if (record.switchingToEdit) return;
+        const sourceRecord = messageStore.find((item) => item.id === record.id) || record;
+        const recordIndex = messageStore.indexOf(sourceRecord);
+        const userRecord = messageStore.slice(0, recordIndex).reverse().find((item) => item.role === 'user');
+        const prompt = userRecord?.text || '';
+        const lower = prompt.toLowerCase();
+        const sourceText = userRecord?.context || captureLead.textContent;
+        const range = userRecord?.anchor && documentPage.contains(userRecord.anchor) ? (() => {
+          const nextRange = document.createRange();
+          nextRange.selectNodeContents(userRecord.anchor);
+          return nextRange;
+        })() : null;
+        sourceRecord.switchingToEdit = true;
+        sourceRecord.intent = null;
+        button.closest('.intent-actions')?.remove();
+        setMode('edit');
+
+        const working = addWorkingMessage();
+        window.setTimeout(() => {
+          working.remove();
+          const edit = lower.includes('long')
+            ? (userRecord?.context ? replaceSelectedEdit(range, longerDocumentText(sourceText)) : replaceTextEdit(captureLead, longerDocumentText(sourceText)))
+            : (userRecord?.context ? replaceSelectedEdit(range, shorterDocumentText(sourceText)) : replaceTextEdit(captureLead, shorterDocumentText(sourceText)));
+          sourceRecord.mode = 'edit';
+          sourceRecord.text = lower.includes('long') ? copy.longerResponse : copy.shorterResponse;
+          sourceRecord.undo = edit?.undo || null;
+          sourceRecord.undone = false;
+          const article = conversation.querySelector(`[data-message-id="${record.id}"]`);
+          article?.replaceWith(renderMainRecord({ ...sourceRecord, subagentTaskId: activeTaskId ? null : sourceRecord.subagentTaskId }));
+          if (edit?.anchor) bindAgentAnchor(edit.anchor, sourceRecord);
+          scrollConversation();
+        }, WORKING_PREVIEW_MS);
+      },
+    }];
+  }
 
   function showToast(message) {
     window.clearTimeout(toastTimer);
     toast.textContent = message;
     toast.hidden = false;
-    toastTimer = window.setTimeout(() => { toast.hidden = true; }, 2200);
+    toastTimer = window.setTimeout(() => { toast.hidden = true; }, 1800);
   }
 
-  function dismissGuide() {
-    interactionGuide.classList.add('is-dismissed');
-  }
-
-  function setAgentPanelCollapsed(collapsed, { focus = true } = {}) {
-    contentShell.classList.toggle('is-agent-collapsed', collapsed);
-    agentPanel.setAttribute('aria-hidden', String(collapsed));
-    agentPanel.inert = collapsed;
-    openAgentPanelButton.hidden = !collapsed;
-    openAgentPanelButton.setAttribute('aria-expanded', String(!collapsed));
-
-    if (collapsed) {
-      subagentMenu.hidden = true;
-      subagentEntry.setAttribute('aria-expanded', 'false');
-      if (focus && agentPanel.contains(document.activeElement)) documentPage.focus({ preventScroll: true });
-      window.setTimeout(updateAgentShortcutHint, 260);
-      return;
-    }
-
+  function scrollConversation() {
     window.requestAnimationFrame(() => {
-      if (focus) mainAgentTab.focus({ preventScroll: true });
-      positionSubagentMenu();
-    });
-    window.setTimeout(updateAgentShortcutHint, 260);
-  }
-
-  function hideAgentShortcutHint() {
-    activeShortcutBlock?.classList.remove('is-ai-hint-anchor');
-    activeShortcutBlock = null;
-    agentShortcutHint.hidden = true;
-  }
-
-  function updateAgentShortcutHint() {
-    if (!mainPrompt.hidden || !selectionPrompt.hidden || !selectionReview.hidden) {
-      hideAgentShortcutHint();
-      return;
-    }
-
-    const emptyLine = emptyEditableLine(window.getSelection());
-    if (!emptyLine) {
-      hideAgentShortcutHint();
-      return;
-    }
-
-    const blockRect = emptyLine.block.getBoundingClientRect();
-    const workspaceRect = documentWorkspace.getBoundingClientRect();
-    const scrollerRect = documentSurface.getBoundingClientRect();
-    if (blockRect.bottom < scrollerRect.top || blockRect.top > scrollerRect.bottom) {
-      hideAgentShortcutHint();
-      return;
-    }
-
-    if (activeShortcutBlock !== emptyLine.block) {
-      activeShortcutBlock?.classList.remove('is-ai-hint-anchor');
-      activeShortcutBlock = emptyLine.block;
-      activeShortcutBlock.classList.add('is-ai-hint-anchor');
-    }
-    agentShortcutHint.style.left = `${blockRect.left - workspaceRect.left}px`;
-    agentShortcutHint.style.top = `${blockRect.top - workspaceRect.top}px`;
-    agentShortcutHint.hidden = false;
-  }
-
-  window.setTimeout(dismissGuide, 7000);
-
-  function titleFromPrompt(prompt) {
-    const cleaned = prompt.replace(/\s+/g, ' ').trim();
-    return cleaned.length > 34 ? `${cleaned.slice(0, 34)}…` : cleaned;
-  }
-
-  const subagentAccents = ['violet', 'blue', 'orange', 'mint', 'pink'];
-
-  function elapsedLabel(task) {
-    const end = task.completedAt || Date.now();
-    const seconds = Math.max(0, Math.floor((end - task.startedAt) / 1000));
-    if (seconds < 4) return 'now';
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m ${String(seconds % 60).padStart(2, '0')}s`;
-  }
-
-  function completedAgoLabel(task) {
-    const seconds = Math.max(0, Math.floor((Date.now() - (task.completedAt || Date.now())) / 1000));
-    if (seconds < 4) return 'now';
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    return `${Math.floor(seconds / 3600)}h ago`;
-  }
-
-  function taskDurationLabel(task) {
-    const end = task.completedAt || Date.now();
-    const seconds = Math.max(0, Math.floor((end - task.startedAt) / 1000));
-    if (seconds < 60) return `${seconds}s`;
-    return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
-  }
-
-  function createWorkingLogoCanvas() {
-    const canvas = document.createElement('canvas');
-    canvas.className = 'ai-working-logo';
-    canvas.dataset.workingLogo = '';
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'AI working');
-    return canvas;
-  }
-
-  function createAiTaskStatus() {
-    const status = document.createElement('span');
-    status.className = 'ai-task-status';
-    status.contentEditable = 'false';
-    status.setAttribute('aria-hidden', 'true');
-    status.append(createWorkingLogoCanvas());
-    return status;
-  }
-
-  function completeAiTaskStatus(status) {
-    if (!status?.isConnected) return;
-    status.replaceChildren();
-    status.classList.add('is-done');
-  }
-
-  function clearAiTaskStatusDot(status) {
-    status?.classList.add('is-seen');
-  }
-
-  function createSubagentOrb(task) {
-    const orb = document.createElement('span');
-    orb.className = `subagent-orb orb-${task.accent || 'violet'}`;
-    if (task.state !== 'done') orb.classList.add('is-working');
-    if (task.state === 'thinking') orb.classList.add('is-thinking');
-    orb.setAttribute('aria-hidden', 'true');
-    const fallback = document.createElement('span');
-    fallback.className = 'ai-orb-fallback';
-    ['ai-orb-base', 'ai-orb-blue', 'ai-orb-green'].forEach((className) => {
-      const layer = document.createElement('span');
-      layer.className = className;
-      fallback.append(layer);
-    });
-    orb.append(fallback);
-    return orb;
-  }
-
-  function highlightSubagentTargets(task, closePanel = false) {
-    const targets = task.targets.filter((target) => target?.isConnected);
-    if (!targets.length) return;
-    clearCompletedSubagentHighlight();
-    targets.forEach((target) => target.classList.add('subagent-result-highlight'));
-    targets[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    if (closePanel) closeSubagentWorkspace();
-    highlightTimer = window.setTimeout(clearCompletedSubagentHighlight, 1800);
-  }
-
-  function createTaskRow(task) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = `task-status${task.state === 'done' ? ' is-done' : ''}`;
-    row.dataset.taskId = task.id;
-    row.dataset.state = task.state;
-    row.classList.toggle('is-selected', selectedSubagentTaskId === task.id || activeSubagentDetailId === task.id);
-    row.append(createSubagentOrb(task));
-
-    const copy = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = task.title;
-    const detail = document.createElement('small');
-    detail.className = 'subagent-phase';
-    const phase = task.state === 'thinking' ? 'Thinking' : task.state === 'working' ? 'Working' : 'Done';
-    if (task.state === 'done') {
-      detail.textContent = task.detail;
-    } else {
-      const phaseLabel = document.createElement('span');
-      phaseLabel.className = 'subagent-phase-label';
-      phaseLabel.textContent = phase;
-      phaseLabel.dataset.text = phase;
-      if (task.state === 'working') phaseLabel.classList.add('t-shimmer');
-      detail.append(phaseLabel, document.createTextNode(` · ${task.detail}`));
-    }
-    copy.append(title);
-    if (task.state !== 'done' || task.detail) copy.append(detail);
-
-    const time = document.createElement('time');
-    time.dataset.taskTime = task.id;
-    time.textContent = elapsedLabel(task);
-    row.append(copy, time);
-    row.addEventListener('click', () => {
-      highlightSubagentTargets(task);
-      openSubagentDetail(task.id);
-    });
-    return row;
-  }
-
-  function createSubagentMenuTask(task, isCurrent = false) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = `subagent-menu-task${task.state === 'done' ? ' is-done' : ''}${isCurrent ? ' is-current' : ''}`;
-    row.dataset.taskId = task.id;
-    const main = document.createElement('span');
-    main.className = 'subagent-menu-task-main';
-    const title = document.createElement('span');
-    title.className = 'subagent-menu-task-title';
-    title.textContent = task.title;
-    const time = document.createElement('time');
-    time.dataset.menuTaskTime = task.id;
-    time.textContent = task.state === 'done' ? completedAgoLabel(task) : elapsedLabel(task);
-    main.append(title, time);
-    row.append(main);
-    if (task.state !== 'done') {
-      const detail = document.createElement('span');
-      detail.className = 'subagent-menu-task-detail';
-      detail.textContent = task.detail;
-      row.append(detail);
-    }
-    row.addEventListener('click', () => {
-      highlightSubagentTargets(task);
-      openSubagentDetail(task.id);
-    });
-    return row;
-  }
-
-  function renderSubagentMenu() {
-    const tasks = [...subagentTasks.values()];
-    const active = tasks.filter((task) => task.state !== 'done').reverse();
-    const done = tasks.filter((task) => task.state === 'done').reverse();
-    subagentMenuActiveCount.textContent = String(active.length);
-    subagentMenuDoneCount.textContent = String(done.length);
-    subagentMenuActiveList.replaceChildren(...active.map((task, index) => createSubagentMenuTask(task, index === 0)));
-    subagentMenuDoneList.replaceChildren(...done.map((task) => createSubagentMenuTask(task)));
-    subagentMenuEmptyActive.hidden = active.length > 0;
-    subagentMenuEmptyDone.hidden = done.length > 0;
-  }
-
-  function renderSubagentLists() {
-    const tasks = [...subagentTasks.values()];
-    const active = tasks.filter((task) => task.state !== 'done').reverse();
-    const done = tasks.filter((task) => task.state === 'done').reverse();
-    activeTaskList.replaceChildren(...active.map(createTaskRow));
-    doneTaskList.replaceChildren(...done.map(createTaskRow));
-    activeCount.textContent = String(active.length);
-    doneCount.textContent = String(done.length);
-    emptyActive.hidden = active.length > 0;
-    emptyDone.hidden = done.length > 0;
-    agentCount.textContent = String(active.length);
-    agentCount.hidden = active.length === 0;
-    renderSubagentMenu();
-  }
-
-  function renderSubagentDetail(task) {
-    if (!task) return;
-    subagentDetailIdentity.replaceChildren();
-    const identity = document.createElement('div');
-    identity.className = 'subagent-detail-identity';
-    const title = document.createElement('strong');
-    title.textContent = task.title;
-    identity.append(title);
-    subagentDetailIdentity.append(identity);
-    const phase = task.state === 'done' ? 'worked' : task.state === 'thinking' ? 'thinking' : 'working';
-    subagentRuntime.innerHTML = `${phase} for ${taskDurationLabel(task)} <span aria-hidden="true">›</span>`;
-    subagentDetailContent.replaceChildren();
-    const status = document.createElement('p');
-    status.className = 'subagent-detail-status';
-    status.textContent = task.state === 'done' && task.detail === 'Completed in the document'
-      ? 'Completed in From Dots to Direction'
-      : task.detail;
-    if (task.state !== 'done' || !task.resultTitle) subagentDetailContent.append(status);
-    if (task.state === 'done' && task.resultTitle) {
-      const heading = document.createElement('h3');
-      heading.textContent = task.resultTitle;
-      subagentDetailContent.append(heading);
-    }
-    if (task.state === 'done' && task.resultText) {
-      const result = document.createElement('p');
-      result.textContent = task.resultText;
-      subagentDetailContent.append(result);
-    }
-  }
-
-  function syncAgentViewTabs(view) {
-    const showSubagents = view === 'subagent';
-    subagentPanelTab.hidden = true;
-    mainAgentTab.setAttribute('aria-selected', 'true');
-    mainAgentTab.tabIndex = 0;
-    mainAgentTab.classList.add('is-active');
-    subagentPanelTab.setAttribute('aria-selected', 'false');
-    subagentPanelTab.tabIndex = -1;
-    subagentPanelTab.classList.remove('is-active');
-    agentConversation.setAttribute('aria-hidden', String(showSubagents));
-  }
-
-  function openSubagentDetail(taskId) {
-    const task = subagentTasks.get(taskId);
-    if (!task) return;
-    setAgentPanelCollapsed(false, { focus: false });
-    activeSubagentDetailId = taskId;
-    selectedSubagentTaskId = taskId;
-    subagentMenu.hidden = true;
-    subagentPopover.hidden = false;
-    agentPanel.classList.add('has-subagent-view');
-    syncAgentViewTabs('subagent');
-    subagentListView.hidden = true;
-    subagentDetailView.hidden = false;
-    subagentEntry.setAttribute('aria-expanded', 'false');
-    renderSubagentDetail(task);
-    renderSubagentLists();
-  }
-
-  function showSubagentList(taskId = selectedSubagentTaskId) {
-    activeSubagentDetailId = null;
-    selectedSubagentTaskId = taskId || null;
-    subagentDetailView.hidden = true;
-    subagentListView.hidden = false;
-    renderSubagentLists();
-  }
-
-  function openSubagentPage(taskId) {
-    openSubagentDetail(taskId || latestSubagentTaskId);
-  }
-
-  function closeSubagentWorkspace() {
-    subagentPopover.hidden = true;
-    agentPanel.classList.remove('has-subagent-view');
-    syncAgentViewTabs('main');
-    subagentMenu.hidden = true;
-    subagentEntry.setAttribute('aria-expanded', 'false');
-    activeSubagentDetailId = null;
-    selectedSubagentTaskId = null;
-  }
-
-  function attachDocumentTaskState(task, target, state, label) {
-    if (!(target instanceof Element)) return;
-    task.documentMarker?.remove();
-    task.documentTarget?.classList.remove('subagent-doc-target', 'is-thinking', 'is-working', 'is-done');
-    target.classList.add('subagent-doc-target');
-    if (!(task.kind === 'selection-edit' && state === 'done')) {
-      target.classList.add(`is-${state}`);
-    }
-    task.documentTarget = target;
-    if (state === 'done') {
-      task.documentMarker = null;
-      return;
-    }
-    const marker = createAiTaskStatus();
-    marker.classList.add('document-subagent-state', `is-${state}`);
-    target.prepend(marker);
-    task.documentMarker = marker;
-    positionStatusAtDocumentGutter(marker, target);
-    const anchor = task.documentAnchor;
-    if (anchor instanceof Element && anchor.isConnected && anchor !== target) {
-      const targetRect = target.getBoundingClientRect();
-      const anchorRect = anchor.getClientRects()[0] || anchor.getBoundingClientRect();
-      const lineHeight = Math.min(anchorRect.height || 16, 24);
-      const markerTop = Math.max(0, anchorRect.top - targetRect.top + Math.max(0, (lineHeight - 24) / 2));
-      marker.style.top = `${markerTop}px`;
-    }
-  }
-
-  function clearDocumentTaskState(task, delay = 0) {
-    const clear = () => {
-      task.documentMarker?.remove();
-      task.documentTarget?.classList.remove('subagent-doc-target', 'is-thinking', 'is-working', 'is-done');
-      task.documentMarker = null;
-    };
-    if (delay) window.setTimeout(clear, delay);
-    else clear();
-  }
-
-  function setSubagentActive(title, detail = 'Preparing the task', config = {}) {
-    const id = `subagent-${++subagentTaskSequence}`;
-    const task = {
-      id,
-      kind: config.kind || 'generic',
-      title,
-      detail,
-      state: 'thinking',
-      accent: config.accent || subagentAccents[subagentTaskSequence % subagentAccents.length],
-      startedAt: Date.now(),
-      completedAt: null,
-      targets: (Array.isArray(config.targets) ? config.targets : [config.targets]).filter((target) => target instanceof Element),
-      resultTitle: config.resultTitle || '',
-      resultText: config.resultText || '',
-      sourcePrompt: config.sourcePrompt || '',
-      documentTarget: null,
-      documentAnchor: config.documentAnchor instanceof Element ? config.documentAnchor : null,
-      documentMarker: null,
-      aiBlock: config.aiBlock || null,
-      cancelStream: null,
-    };
-    subagentTasks.set(id, task);
-    latestSubagentTaskId = id;
-    clearCompletedSubagentHighlight();
-    const documentTarget = config.documentTarget === false
-      ? null
-      : config.documentTarget instanceof Element ? config.documentTarget : task.targets[0];
-    if (documentTarget) attachDocumentTaskState(task, documentTarget, 'thinking', 'Thinking');
-    renderSubagentLists();
-    showSubagentStartInMainChat(task);
-    return id;
-  }
-
-  function updateSubagentTask(taskId, updates = {}) {
-    const task = subagentTasks.get(taskId);
-    if (!task) return null;
-    Object.assign(task, updates);
-    if (updates.state && task.documentTarget) {
-      const label = updates.state === 'thinking' ? 'Thinking' : updates.state === 'working' ? 'Working' : 'Done';
-      attachDocumentTaskState(task, task.documentTarget, updates.state, label);
-    }
-    renderSubagentLists();
-    if (activeSubagentDetailId === taskId) renderSubagentDetail(task);
-    return task;
-  }
-
-  function setSubagentDone(title, detail = 'Completed successfully', targets = [], taskId = null) {
-    let task = taskId ? subagentTasks.get(taskId) : null;
-    if (!task) {
-      task = [...subagentTasks.values()].reverse().find((item) => item.state !== 'done' && item.title === title)
-        || subagentTasks.get(latestSubagentTaskId);
-    }
-    if (!task) return null;
-    const wasDone = task.state === 'done';
-    task.cancelStream?.();
-    task.cancelStream = null;
-    task.title = title;
-    task.detail = detail;
-    task.state = 'done';
-    task.completedAt = Date.now();
-    task.targets = (Array.isArray(targets) ? targets : [targets]).filter((target) => target instanceof Element);
-    const documentTarget = task.aiBlock || task.inlineAnchor ? null : task.documentTarget || task.targets[0];
-    if (task.kind === 'selection-edit' && task.documentMarker?.isConnected) {
-      task.documentTarget?.classList.remove('is-thinking', 'is-working');
-      completeAiTaskStatus(task.documentMarker);
-    } else {
-      if (documentTarget) attachDocumentTaskState(task, documentTarget, 'done', 'Done');
-      clearDocumentTaskState(task, 1600);
-    }
-    renderSubagentLists();
-    if (activeSubagentDetailId === task.id) renderSubagentDetail(task);
-    if (!wasDone) {
-      void cuelume.then((module) => module?.play('scan'));
-    }
-    return task;
-  }
-
-  function clearCompletedSubagentHighlight() {
-    window.clearTimeout(highlightTimer);
-    document.querySelectorAll('.subagent-result-highlight').forEach((target) => {
-      target.classList.remove('subagent-result-highlight');
+      conversation.scrollTo({ top: conversation.scrollHeight, behavior: 'smooth' });
     });
   }
 
-  function hideReviewSuggestion() {
-    reviewSuggestionCard.hidden = true;
-    agentPanel.classList.remove('has-review-suggestion');
-  }
-
-  function clearReviewHighlight() {
-    window.clearTimeout(reviewHighlightTimer);
-    document.querySelectorAll('.review-target-focus').forEach((target) => target.classList.remove('review-target-focus'));
-    document.querySelectorAll('.review-done-card.is-targeted').forEach((card) => card.classList.remove('is-targeted'));
-  }
-
-  function restoreActiveReviewDiff() {
-    if (!activeReviewDiff) return;
-    const { review, button } = activeReviewDiff;
-    review.target.textContent = review.state === 'dismissed' ? review.before : review.suggestion;
-    review.target.classList.remove('review-inline-diff');
-    button.textContent = 'Show changes';
-    button.setAttribute('aria-expanded', 'false');
-    activeReviewDiff = null;
-  }
-
-  function showReviewSuggestion(suggestions) {
-    reviewSuggestionCount.textContent = String(suggestions.length);
-    reviewSuggestionCopy.textContent = `You've received ${suggestions.length} suggestions from Dotwise.`;
-    reviewSuggestionCard.hidden = false;
-    agentPanel.classList.add('has-review-suggestion');
-  }
-
-  function highlightReviewTarget(review, card) {
-    if (!review.target?.isConnected) return;
-    clearReviewHighlight();
-    review.target.classList.add('review-target-focus');
-    card?.classList.add('is-targeted');
-    review.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    reviewHighlightTimer = window.setTimeout(clearReviewHighlight, 2200);
-  }
-
-  function showReviewDiffInDocument(review, card, button) {
-    if (activeReviewDiff?.review === review) {
-      restoreActiveReviewDiff();
-      clearReviewHighlight();
-      reviewStatus.textContent = `Hidden the ${review.label.toLowerCase()} change.`;
-      showToast('Changes hidden');
-      return;
-    }
-    restoreActiveReviewDiff();
-    clearReviewHighlight();
-    const fragment = document.createDocumentFragment();
-    review.diffParts.forEach((part) => {
-      const span = document.createElement('span');
-      span.className = `review-inline-${part.type}`;
-      span.textContent = part.text;
-      fragment.append(span);
-    });
-    review.target.replaceChildren(fragment);
-    review.target.classList.add('review-inline-diff');
-    card.classList.add('is-targeted');
-    button.textContent = 'Hide changes';
-    button.setAttribute('aria-expanded', 'true');
-    activeReviewDiff = { review, card, button };
-    review.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    reviewStatus.textContent = `Showing the ${review.label.toLowerCase()} change in the document.`;
-    showToast('Showing changes in the document');
-  }
-
-  function dismissReviewCard(review, card) {
-    if (activeReviewDiff?.review === review) restoreActiveReviewDiff();
-    review.state = 'dismissed';
-    review.target.textContent = review.before;
-    card.classList.add('is-dismissed');
-    card.querySelector('.review-done-card-title').textContent = 'Change dismissed';
-    highlightReviewTarget(review, card);
-    showToast('Review change dismissed');
-  }
-
-  function createReviewDoneCard(review) {
-    const card = document.createElement('article');
-    card.className = 'review-done-card';
-    card.tabIndex = 0;
-    card.dataset.reviewId = review.id;
-    card.setAttribute('aria-label', `${review.doneTitle}. Open its document location.`);
-
-    const shell = document.createElement('div');
-    shell.className = 'review-done-card-shell';
-    const title = document.createElement('strong');
-    title.className = 'review-done-card-title';
-    title.textContent = review.doneTitle;
-
-    const actions = document.createElement('div');
-    actions.className = 'review-done-actions';
-    const showChanges = document.createElement('button');
-    showChanges.type = 'button';
-    showChanges.className = 'show-review-changes';
-    showChanges.textContent = 'Show changes';
-    showChanges.setAttribute('aria-expanded', 'false');
-    const undo = document.createElement('button');
-    undo.type = 'button';
-    undo.className = 'undo-review-change';
-    undo.setAttribute('aria-label', 'Dismiss and revert this change');
-    const undoIcon = document.createElement('img');
-    undoIcon.src = 'assets/figma/review-undo.svg';
-    undoIcon.alt = '';
-    undo.append(undoIcon);
-    actions.append(showChanges, undo);
-    shell.append(title, actions);
-    card.append(shell);
-
-    showChanges.addEventListener('click', (event) => {
-      event.stopPropagation();
-      if (review.state === 'dismissed') return;
-      showReviewDiffInDocument(review, card, showChanges);
-    });
-    undo.addEventListener('click', (event) => {
-      event.stopPropagation();
-      if (review.state === 'dismissed') return;
-      dismissReviewCard(review, card);
-    });
-    card.addEventListener('click', (event) => {
-      if (event.target.closest('button')) return;
-      highlightReviewTarget(review, card);
-    });
-    card.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      highlightReviewTarget(review, card);
-    });
-    return card;
-  }
-
-  function sendReviewSuggestionsToChat() {
-    if (!pendingReviewSuggestions.length) return;
-    restoreActiveReviewDiff();
-    const sentReviews = pendingReviewSuggestions.map((review) => ({
-      ...review,
-      before: review.target.textContent.trim(),
-      state: 'applied',
-    }));
-    sentReviews.forEach((review) => { review.target.textContent = review.suggestion; });
-
-    const request = document.createElement('div');
-    request.className = 'user-message review-user-message';
-    request.textContent = 'Apply all review suggestions';
-
-    const introduction = document.createElement('div');
-    introduction.className = 'assistant-message review-assistant-copy';
-    const introOpening = document.createElement('p');
-    introOpening.textContent = 'I’ve finished reviewing the document. The central idea is strong, so I kept the structure and voice intact.';
-    const introDetail = document.createElement('p');
-    introDetail.textContent = `I focused on ${sentReviews.length} small changes that improve clarity, flow, and precision:`;
-    introduction.append(introOpening, introDetail);
-
-    const changeList = document.createElement('div');
-    changeList.className = 'review-change-list';
-    sentReviews.forEach((review, index) => {
-      const entry = document.createElement('section');
-      entry.className = 'review-change-entry';
-      const context = document.createElement('p');
-      context.className = 'review-change-context';
-      context.textContent = `${index + 1}. ${review.chatSummary}`;
-      entry.append(context, createReviewDoneCard(review));
-      changeList.append(entry);
-    });
-
-    const conclusion = document.createElement('div');
-    conclusion.className = 'assistant-message review-assistant-copy review-assistant-conclusion';
-    const conclusionText = document.createElement('p');
-    conclusionText.textContent = 'That’s all I’d change for now. The draft reads more cleanly without losing its reflective tone. You can inspect or undo each edit above.';
-    conclusion.append(conclusionText);
-
-    const messageActions = document.createElement('div');
-    messageActions.className = 'message-actions review-message-actions';
-    [
-      ['agent-refresh.svg', 'Regenerate review response'],
-      ['agent-thumbs-up.svg', 'Helpful response'],
-      ['agent-thumbs-down.svg', 'Unhelpful response'],
-      ['agent-copy.svg', 'Copy review response'],
-    ].forEach(([icon, label]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.setAttribute('aria-label', label);
-      const image = document.createElement('img');
-      image.src = `assets/figma/${icon}`;
-      image.alt = '';
-      button.append(image);
-      button.addEventListener('click', () => showToast(label));
-      messageActions.append(button);
-    });
-
-    reviewChatBlock.replaceChildren(request, introduction, changeList, conclusion, messageActions);
-    reviewChatBlock.hidden = false;
-    hideReviewSuggestion();
-    pendingReviewSuggestions = [];
-    reviewRemaining = 0;
-    reviewStatus.textContent = `AI review applied ${sentReviews.length} changes. Use Show changes to inspect each diff in the document.`;
-    window.requestAnimationFrame(() => {
-      agentConversation.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    showToast('Review suggestions sent to Agent Chat');
-  }
-
-  function showAutomaticReviewSuggestion() {
-    if (!reviewSuggestionCard.hidden || !reviewChatBlock.hidden) return;
-    const suggestions = reviewDefinitions.filter(({ target, suggestion }) => target.textContent.trim() !== suggestion.trim());
-    if (!suggestions.length) return;
-    pendingReviewSuggestions = suggestions;
-    reviewRemaining = suggestions.length;
-    showReviewSuggestion(suggestions);
-    reviewStatus.textContent = `Dotwise found ${suggestions.length} review suggestions.`;
-  }
-
-  function placeMainPrompt() {
-    mainPrompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function positionSubagentMenu() {
-    const shell = document.querySelector('.content-shell');
-    if (!shell || subagentMenu.hidden) return;
-    const shellRect = shell.getBoundingClientRect();
-    const triggerRect = subagentEntry.getBoundingClientRect();
-    const menuWidth = Math.min(340, shellRect.width - 16);
-    const left = clamp(triggerRect.right - shellRect.left - menuWidth + 10, 8, shellRect.width - menuWidth - 8);
-    const top = clamp(triggerRect.bottom - shellRect.top + 6, 44, shellRect.height - 120);
-    subagentMenu.style.left = `${left}px`;
-    subagentMenu.style.right = 'auto';
-    subagentMenu.style.top = `${top}px`;
-  }
-
-  function syncMainPromptState() {
-    const isReady = Boolean(mainPromptInput.value.trim());
-    mainPromptSubmit.disabled = !isReady;
-    mainPromptSubmit.classList.toggle('is-ready', isReady);
-    syncPromptIntent(mainPromptInput, mainPromptIntent, mainPromptIntentOverride);
-  }
-
-  function openMainPrompt(anchorBlock = null, insertionRange = null) {
-    if (!selectionPrompt.hidden || !selectionReview.hidden) return;
-    hideAgentShortcutHint();
-    const host = document.createElement('section');
-    host.className = 'agent-ask-inline-host';
-    host.contentEditable = 'false';
-    const validAnchor = anchorBlock instanceof Element && anchorBlock.isConnected && documentPage.contains(anchorBlock)
-      ? anchorBlock
-      : null;
-    if (validAnchor && !validAnchor.textContent.replace(/\u200b/g, '').trim()) {
-      mainPromptReplacedBlock = validAnchor;
-      validAnchor.replaceWith(host);
-    } else {
-      mainPromptReplacedBlock = null;
-      if (validAnchor) validAnchor.after(host);
-      else documentPage.append(host);
-    }
-    mainPromptAnchorBlock = host;
-    mainPromptInsertionRange = isInteractionB && insertionRange ? insertionRange.cloneRange() : null;
-    host.append(mainPrompt);
-    dismissGuide();
-    mainPromptIntentOverride = null;
-    mainPrompt.hidden = false;
-    mainPromptInput.value = '';
-    syncMainPromptState();
-    window.requestAnimationFrame(() => {
-      placeMainPrompt();
-      mainPromptInput.focus();
-    });
-  }
-
-  function closeMainPrompt() {
-    const host = mainPromptAnchorBlock;
-    mainPrompt.hidden = true;
-    documentWorkspace.append(mainPrompt);
-    if (host?.isConnected && mainPromptReplacedBlock) host.replaceWith(mainPromptReplacedBlock);
-    else host?.remove();
-    mainPromptInput.value = '';
-    mainPromptIntentOverride = null;
-    mainPromptAnchorBlock = null;
-    mainPromptInsertionRange = null;
-    const restoredBlock = mainPromptReplacedBlock;
-    mainPromptReplacedBlock = null;
-    syncMainPromptState();
-    if (restoredBlock?.isConnected) {
-      const range = document.createRange();
-      range.selectNodeContents(restoredBlock);
-      range.collapse(true);
+  function bindExpandableContext(chip, text) {
+    if (!chip || !text) return chip;
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('tabindex', '0');
+    chip.setAttribute('aria-expanded', 'false');
+    chip.querySelector('.message-context-preview').textContent = text.length > 30
+      ? `“${text.slice(0, 30)}…”`
+      : `“${text}”`;
+    chip.querySelector('.message-context-full').textContent = `“${text}”`;
+    const toggle = (event) => {
+      if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+      const expanded = chip.getAttribute('aria-expanded') === 'true';
+      // A click is also emitted when a user finishes dragging to select text.
+      // Keep the expanded card open in that case so its context can be copied.
       const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      documentPage.focus({ preventScroll: true });
-      window.requestAnimationFrame(updateAgentShortcutHint);
+      const selectingChipText = event.type === 'click'
+        && expanded
+        && selection
+        && !selection.isCollapsed
+        && selection.rangeCount > 0
+        && selection.getRangeAt(0).intersectsNode(chip);
+      if (selectingChipText) return;
+      event.preventDefault();
+      chip.setAttribute('aria-expanded', String(!expanded));
+    };
+    chip.addEventListener('click', toggle);
+    chip.addEventListener('keydown', toggle);
+    return chip;
+  }
+
+  function focusAgentMessage(recordId, taskId = null) {
+    const recordIndex = messageStore.findIndex((record) => record.id === recordId);
+    const sourceRecord = recordIndex >= 0 ? messageStore[recordIndex] : null;
+    // A dotted document reference represents the user's original instruction.
+    // Generated document text is stored against an assistant reply, so walk
+    // back to that instruction and replay the grey user bubble instead.
+    const targetRecord = sourceRecord?.role === 'assistant'
+      ? messageStore.slice(0, recordIndex).reverse().find((record) => record.role === 'user')
+      : sourceRecord;
+    const targetId = targetRecord?.id || recordId;
+    if (taskId && taskStore.has(taskId)) {
+      showTask(taskId);
     } else {
-      documentSurface.focus({ preventScroll: true });
+      showMainSession();
     }
-  }
-
-  function readCssTime(variable, fallback) {
-    const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-    if (value.endsWith('ms')) return Number.parseFloat(value) || fallback;
-    if (value.endsWith('s')) return (Number.parseFloat(value) || fallback / 1000) * 1000;
-    return fallback;
-  }
-
-  function replayStream(element, text, isCurrent) {
-    const timers = [];
-    const words = text.match(/\S+\s*/g) || [];
-    const fragment = document.createDocumentFragment();
-    const spans = words.map((word) => {
-      const span = document.createElement('span');
-      span.className = 't-stream-w';
-      span.textContent = word;
-      span.style.transition = 'none';
-      fragment.append(span);
-      return span;
-    });
-
-    element.replaceChildren(fragment);
-    void element.offsetWidth;
-
-    const gap = readCssTime('--stream-gap', 60);
-    spans.forEach((span, index) => {
-      span.style.removeProperty('transition');
-      const timer = window.setTimeout(() => {
-        if (isCurrent()) span.classList.add('is-in');
-      }, index * gap);
-      timers.push(timer);
-    });
-
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }
-
-  function animateAiWorkingBlockResize(block, shouldExpand) {
-    if (!block?.container?.isConnected) return;
-    block.cancelResize?.();
-
-    const { container, card, controls, anchorButton, logoButton, statusElement } = block;
-    const startingHeight = card.getBoundingClientRect().height;
-    card.style.height = `${startingHeight}px`;
-    container.classList.toggle('is-expanded', shouldExpand);
-    controls.hidden = !shouldExpand;
-    anchorButton.setAttribute('aria-expanded', String(shouldExpand));
-    anchorButton.setAttribute('aria-label', shouldExpand ? 'Collapse generated content' : 'Review generated content');
-    logoButton.setAttribute('aria-expanded', String(shouldExpand));
-    logoButton.setAttribute('aria-label', shouldExpand ? 'Collapse generated content' : 'Review generated content');
-    if (shouldExpand) clearAiTaskStatusDot(statusElement);
-
-    card.style.height = 'auto';
-    const targetHeight = card.scrollHeight;
-    card.style.height = `${startingHeight}px`;
-    let frameId = 0;
-    let fallbackId = 0;
-    let finished = false;
-
-    const clearListeners = () => {
-      card.removeEventListener('transitionend', handleTransitionEnd);
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(fallbackId);
-      block.cancelResize = null;
-    };
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      clearListeners();
-      card.style.removeProperty('height');
-      if (!shouldExpand) controls.hidden = true;
-    };
-
-    const handleTransitionEnd = (event) => {
-      if (event.target === card && event.propertyName === 'height') finish();
-    };
-
-    block.cancelResize = () => {
-      if (finished) return;
-      finished = true;
-      clearListeners();
-    };
-
-    card.addEventListener('transitionend', handleTransitionEnd);
-    void card.offsetHeight;
-    frameId = window.requestAnimationFrame(() => {
-      card.style.height = `${targetHeight}px`;
-      if (shouldExpand) container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-    fallbackId = window.setTimeout(finish, readCssTime('--resize-dur', 300) + 80);
-  }
-
-  function createAiWorkingBlock(kind) {
-    const container = document.createElement('section');
-    container.className = `ai-working-block ai-working-block-${kind}`;
-    container.dataset.state = 'thinking';
-    container.contentEditable = 'false';
-
-    const logoButton = document.createElement('button');
-    logoButton.type = 'button';
-    logoButton.className = 'ai-working-block-logo ai-task-status';
-    logoButton.setAttribute('aria-label', 'Open associated subagent');
-    logoButton.setAttribute('aria-expanded', 'false');
-    logoButton.append(createWorkingLogoCanvas());
-
-    const card = document.createElement('div');
-    card.className = 'ai-working-block-card t-resize';
-    const anchorButton = document.createElement('button');
-    anchorButton.type = 'button';
-    anchorButton.className = 'ai-working-block-anchor inline-subagent-anchor';
-    anchorButton.setAttribute('aria-label', 'Open associated subagent');
-    anchorButton.setAttribute('aria-expanded', 'false');
-    const statusElement = isInteractionB ? createAiTaskStatus() : logoButton;
-    if (isInteractionB) {
-      populateAiChip(anchorButton);
-      anchorButton.append(statusElement);
-    }
-    const copy = document.createElement('div');
-    copy.className = 'ai-working-block-copy';
-    card.append(copy);
-
-    const controls = document.createElement('div');
-    controls.className = 'ai-working-block-controls';
-    controls.hidden = true;
-
-    const actions = document.createElement('div');
-    actions.className = 'ai-working-block-actions';
-    const chat = document.createElement('button');
-    chat.type = 'button';
-    chat.className = 'ai-working-block-chat';
-    chat.innerHTML = `<img src="assets/figma/selection-chat.svg" alt=""><span>${isInteractionB ? 'Ask in chat' : 'Expand to chat'}</span>`;
-    const divider = document.createElement('span');
-    divider.className = 'ai-working-block-divider';
-    const dismiss = document.createElement('button');
-    dismiss.type = 'button';
-    dismiss.className = 'ai-working-block-dismiss';
-    dismiss.setAttribute('aria-label', 'Discard generated content');
-    dismiss.innerHTML = '<img src="assets/figma/selection-undo.svg" alt="">';
-    const accept = document.createElement('button');
-    accept.type = 'button';
-    accept.className = 'ai-working-block-accept';
-    accept.setAttribute('aria-label', 'Insert generated content');
-    accept.innerHTML = '<img src="assets/figma/ai-block-check.svg" alt="">';
-    actions.append(chat, divider, dismiss, accept);
-    controls.append(actions);
-    card.append(controls);
-    if (!isInteractionB) container.append(logoButton);
-    container.append(anchorButton, card);
-
-    const block = { container, logoButton, statusElement, anchorButton, card, copy, controls, chat, dismiss, accept, text: '', taskId: null };
-    const openBlock = () => {
-      hideInlineSubagentTooltip();
-      if (block.taskId) openSubagentDetail(block.taskId);
-      if (container.dataset.state === 'done') {
-        animateAiWorkingBlockResize(block, !container.classList.contains('is-expanded'));
-      }
-    };
-    anchorButton.addEventListener('click', openBlock);
-    logoButton.addEventListener('click', openBlock);
-    chat.addEventListener('click', () => {
-      expandAiWorkingBlockToChat(block);
-    });
-    dismiss.addEventListener('click', () => dismissAiWorkingBlock(block));
-    accept.addEventListener('click', () => acceptAiWorkingBlock(block));
-    return block;
-  }
-
-  function setAiWorkingBlockState(block, state, text = block.text) {
-    if (!block?.container?.isConnected) return;
-    block.text = text;
-    block.container.dataset.state = state;
-    if (state === 'working') {
-      block.copy.textContent = text.replace(/\n\s*\n/g, '\n');
-      if (!isInteractionB) block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
-    }
-    if (state === 'done') {
-      block.copy.textContent = text.replace(/\n\s*\n/g, '\n');
-      if (!isInteractionB) block.anchorButton.textContent = text.replace(/\s+/g, ' ').trim();
-      completeAiTaskStatus(block.statusElement);
-      if (!isInteractionB) block.logoButton.setAttribute('aria-label', 'Review generated content');
-      block.anchorButton.setAttribute('aria-label', 'Review generated content');
-      block.anchorButton.setAttribute('aria-expanded', 'false');
-    }
-  }
-
-  function expandAiWorkingBlockToChat(block) {
-    if (!block?.container?.isConnected || block.container.dataset.state !== 'done') return;
-    const task = subagentTasks.get(block.taskId);
-    const prompt = task?.sourcePrompt || task?.title || 'Continue working with this draft';
-    const result = block.text || task?.resultText || '';
-
-    closeSubagentWorkspace();
-    syncComposerQuote(null);
-
-    const request = document.createElement('div');
-    request.className = 'user-message';
-    request.textContent = prompt;
-
-    const response = document.createElement('div');
-    response.className = 'assistant-message agent-expanded-result';
-    const introduction = document.createElement('p');
-    introduction.textContent = `I finished the ${task?.title ? `“${task.title}” draft` : 'draft'} in the document. Here’s the current version—we can keep refining it in this chat.`;
-    const resultCopy = document.createElement('div');
-    resultCopy.className = 'agent-expanded-result-copy';
-    createInsertedParagraphs(result).forEach((paragraph) => resultCopy.append(paragraph));
-    response.append(introduction, resultCopy);
-
-    const entry = document.createElement('article');
-    entry.className = 'agent-chat-task';
-    entry.append(request, response, createAgentMessageActions('Regenerate response'));
-    agentAskChatBlock.append(entry);
-    agentAskChatBlock.hidden = false;
     window.requestAnimationFrame(() => {
-      agentConversation.scrollTo({ top: agentConversation.scrollHeight, behavior: 'smooth' });
-      chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
+      const message = conversation.querySelector(`[data-message-id="${targetId}"]`);
+      if (!message) return;
+      message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window.clearTimeout(targetFlashTimers.get(message));
+      message.classList.remove('is-targeted');
+      // Force a fresh animation even when several document references are
+      // clicked in quick succession.
+      void message.offsetWidth;
+      message.classList.add('is-targeted');
+      targetFlashTimers.set(message, window.setTimeout(() => {
+        message.classList.remove('is-targeted');
+        targetFlashTimers.delete(message);
+      }, 900));
     });
-    showToast('Conversation sent to Agent Chat');
   }
 
-  function createInsertedParagraphs(text) {
-    return text.split(/\n\s*\n/).filter(Boolean).map((part) => {
-      const paragraph = document.createElement('p');
-      paragraph.textContent = part.trim();
-      return paragraph;
+  function bindAgentAnchor(anchor, record) {
+    if (!anchor || !record) return anchor;
+    // Document references always replay the originating user instruction,
+    // including references created from the assistant's generated edit.
+    anchor.dataset.messageId = record.sourceUserId || record.id;
+    if (activeTaskId) anchor.dataset.taskId = activeTaskId;
+    anchor.setAttribute('role', 'link');
+    anchor.setAttribute('tabindex', '0');
+    anchor.setAttribute('aria-label', 'Open this interaction in the agent session');
+    if (anchor.dataset.agentBound === 'true') return anchor;
+    const open = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      focusAgentMessage(anchor.dataset.messageId, anchor.dataset.taskId || null);
+    };
+    anchor.addEventListener('click', open);
+    anchor.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') open(event);
     });
+    anchor.dataset.agentBound = 'true';
+    return anchor;
   }
 
-  function acceptAiWorkingBlock(block) {
-    if (!block?.container?.isConnected || block.container.dataset.state !== 'done') return;
-    block.cancelResize?.();
-    const task = subagentTasks.get(block.taskId);
-    const paragraphs = createInsertedParagraphs(block.text);
-    if (!paragraphs.length) return;
-    const fragment = document.createDocumentFragment();
-    paragraphs.forEach((paragraph) => fragment.append(paragraph));
-    block.container.replaceWith(fragment);
-    if (task) {
-      if (tooltipTaskId === task.id) hideInlineSubagentTooltip();
-      task.detail = 'Completed in the document';
-      task.targets = paragraphs;
-      task.documentTarget = paragraphs[0];
-      task.aiBlock = null;
-      task.inlineAnchor = null;
-      renderSubagentLists();
-      if (activeSubagentDetailId === task.id) renderSubagentDetail(task);
-    }
-    placeCaretAfter(paragraphs.at(-1));
-    showToast('AI content inserted into the document');
-  }
+  function wrapRangeAsAgentAnchor(range) {
+    if (!range || range.collapsed) return null;
+    const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    const existing = container?.closest?.('.agent-anchor');
+    if (existing && documentPage.contains(existing)) return existing;
+    const anchor = document.createElement('span');
+    anchor.className = 'agent-anchor agent-anchor-pending';
+    anchor.append(range.extractContents());
+    range.insertNode(anchor);
 
-  function dismissAiWorkingBlock(block) {
-    if (!block?.container?.isConnected) return;
-    block.cancelResize?.();
-    const task = subagentTasks.get(block.taskId);
-    block.container.remove();
-    if (task) {
-      if (tooltipTaskId === task.id) hideInlineSubagentTooltip();
-      task.cancelStream?.();
-      task.cancelStream = null;
-      task.detail = 'Dismissed';
-      task.targets = [];
-      task.documentTarget = null;
-      task.aiBlock = null;
-      task.inlineAnchor = null;
-      renderSubagentLists();
-      if (activeSubagentDetailId === task.id) renderSubagentDetail(task);
-    }
-    documentPage.focus({ preventScroll: true });
-    showToast('AI content dismissed');
-  }
-
-  const diaryResult = `Today felt less like a sequence of finished events and more like a collection of small signals. A phrase from the morning meeting stayed with me, then resurfaced while I was walking home. I wrote it down before I could make it sound more certain than it really was.\n\nBy evening, the fragments had started to connect: the unfinished sketch, the question in the margin, and the conversation I almost forgot. None of them is an answer yet, but together they point toward a calmer, more deliberate next step.`;
-  const grammarResult = 'The best capture system is deliberately incomplete. Save the fragment before polishing it; you can add context later.';
-
-  const demoTaskDefinitions = {
-    diary: {
-      title: 'Write a diary',
-      accent: 'blue',
-      thinkingDetail: 'Collecting moments from the day',
-      workingDetail: 'Drafting a reflective diary entry',
-      resultTitle: 'Tuesday evening notes',
-      resultText: diaryResult,
-      insertText: diaryResult,
-      target: () => subagentDiarySection,
-      anchor: () => subagentDiaryCopy,
-      duration: 11000,
-    },
-    summary: {
-      title: 'Expand the summary',
-      accent: 'orange',
-      thinkingDetail: 'Reading the document structure',
-      workingDetail: 'Expanding the opening summary',
-      resultTitle: 'Expanded summary',
-      resultText: mainAgentResult,
-      insertText: mainAgentResult,
-      target: () => aiCopyRow,
-      anchor: () => aiCopyContinuation,
-      duration: 12000,
-    },
-    grammar: {
-      title: 'Check grammar',
-      accent: 'pink',
-      thinkingDetail: 'Scanning syntax and sentence flow',
-      workingDetail: 'Refining grammar and sentence flow',
-      resultTitle: 'Grammar check complete',
-      resultText: 'Refined the lead sentence for clarity and corrected its sentence flow.',
-      insertText: grammarResult,
-      target: () => document.getElementById('reviewTargetLead'),
-      anchor: () => document.getElementById('reviewTargetLead'),
-      duration: 10500,
-    },
-  };
-
-  function detectDemoTasks(prompt) {
-    const normalized = prompt.toLowerCase();
-    const matches = [];
-    if (/日记|diary|journal/.test(normalized)) matches.push('diary');
-    if (/摘要|summary|abstract|扩写|expand/.test(normalized)) matches.push('summary');
-    if (/语病|语法|grammar|proofread|校对/.test(normalized)) matches.push('grammar');
-    if (/同时|三个|全部|all three|all tasks/.test(normalized) && matches.length < 2) {
-      return ['diary', 'summary', 'grammar'];
-    }
-    return matches.length ? [...new Set(matches)] : ['summary'];
-  }
-
-  function startDemoSubagent(kind, customTitle = '', insertionTarget = null, sourcePrompt = '') {
-    const definition = demoTaskDefinitions[kind];
-    if (!definition) return null;
-    const existing = [...subagentTasks.values()].find((task) => task.kind === kind && task.state !== 'done');
-    if (existing) {
-      showToast(`${existing.title} is already working`);
-      return existing.id;
-    }
-
-    const isBlockResult = Boolean(insertionTarget?.container?.classList.contains('ai-working-block'));
-    const target = insertionTarget?.container || definition.target();
-    const outputTarget = insertionTarget?.copy || (
-      kind === 'summary' ? aiCopyContinuation : kind === 'diary' ? subagentDiaryCopy : target
-    );
-    const outputText = definition.insertText || definition.resultText;
-    if (kind === 'diary' && !insertionTarget) subagentDiarySection.hidden = false;
-    const taskId = setSubagentActive(customTitle || definition.title, definition.thinkingDetail, {
-      kind,
-      accent: definition.accent,
-      targets: isBlockResult ? target : outputTarget,
-      documentTarget: isBlockResult ? false : target,
-      documentAnchor: insertionTarget?.copy || definition.anchor?.() || target,
-      resultTitle: definition.resultTitle,
-      resultText: definition.resultText,
-      sourcePrompt,
-      aiBlock: isBlockResult ? insertionTarget : null,
-    });
-    if (isBlockResult) {
-      insertionTarget.taskId = taskId;
-      if (!isInteractionB) insertionTarget.anchorButton.textContent = sourcePrompt || customTitle || definition.title;
-      const task = subagentTasks.get(taskId);
-      task.inlineAnchor = insertionTarget.anchorButton;
-      insertionTarget.anchorButton.addEventListener('mouseenter', () => showInlineSubagentTooltip(taskId));
-      insertionTarget.anchorButton.addEventListener('mouseleave', scheduleInlineSubagentTooltipHide);
-      insertionTarget.anchorButton.addEventListener('focus', () => showInlineSubagentTooltip(taskId));
-      insertionTarget.anchorButton.addEventListener('blur', scheduleInlineSubagentTooltipHide);
-    }
-
-    window.setTimeout(() => {
-      const task = subagentTasks.get(taskId);
-      if (!task || task.state === 'done') return;
-      updateSubagentTask(taskId, { state: 'working', detail: definition.workingDetail });
-      if (isBlockResult) {
-        setAiWorkingBlockState(insertionTarget, 'working', outputText);
-      } else if (insertionTarget) {
-        target.classList.add('is-working');
-        task.cancelStream = replayStream(outputTarget, outputText, () => task.state === 'working');
-      } else if (kind === 'summary') {
-        aiCopyRow.classList.add('is-working');
-        task.cancelStream = replayStream(aiCopyContinuation, mainAgentResult, () => task.state === 'working');
-      } else if (kind === 'diary') {
-        task.cancelStream = replayStream(subagentDiaryCopy, diaryResult, () => task.state === 'working');
-      }
-    }, 450);
-
-    window.setTimeout(() => {
-      const task = subagentTasks.get(taskId);
-      if (!task || task.state === 'done') return;
-      task.cancelStream?.();
-      task.cancelStream = null;
-      if (isBlockResult) {
-        setAiWorkingBlockState(insertionTarget, 'done', outputText);
-      } else if (insertionTarget) {
-        outputTarget.textContent = outputText;
-        target.classList.remove('is-working');
-        target.classList.add('is-done');
-      } else if (kind === 'summary') {
-        aiCopyContinuation.textContent = mainAgentResult;
-        aiCopyRow.classList.remove('is-working');
-        aiCopyRow.classList.add('is-done');
-      } else if (kind === 'diary') {
-        subagentDiaryCopy.textContent = diaryResult;
-      } else if (kind === 'grammar') {
-        target.textContent = grammarResult;
-      }
-      setSubagentDone(
-        task.title,
-        isBlockResult ? 'Waiting for your confirmation' : 'Completed in the document',
-        isBlockResult ? target : insertionTarget ? outputTarget : target,
-        taskId,
-      );
-      showToast(`${task.title} finished`);
-    }, definition.duration);
-    return taskId;
-  }
-
-  function createAnchoredTaskTargets(kinds, anchorBlock) {
-    const targets = new Map();
-    if (!(anchorBlock instanceof Element) || !anchorBlock.isConnected) return targets;
-
-    const fragment = document.createDocumentFragment();
-    kinds.forEach((kind) => {
-      const block = createAiWorkingBlock(kind);
-      fragment.append(block.container);
-      targets.set(kind, block);
-    });
-    anchorBlock.replaceWith(fragment);
-    return targets;
-  }
-
-  function placeCaretAfter(element) {
-    if (!(element instanceof Element) || !element.isConnected) return;
-    const range = document.createRange();
-    range.setStartAfter(element);
-    range.collapse(true);
+    const selected = document.createRange();
+    selected.selectNodeContents(anchor);
     const selection = window.getSelection();
     selection?.removeAllRanges();
-    selection?.addRange(range);
-    documentPage.focus({ preventScroll: true });
+    selection?.addRange(selected);
+    return anchor;
   }
 
-  function hideInlineSubagentTooltip() {
-    window.clearTimeout(tooltipHideTimer);
-    inlineSubagentTooltip.hidden = true;
-    tooltipTaskId = null;
+  function bindPendingAnchor(anchor, record) {
+    if (!anchor || !record) return;
+    anchor.classList.remove('agent-anchor-pending');
+    bindAgentAnchor(anchor, record);
   }
 
-  function scheduleInlineSubagentTooltipHide() {
-    window.clearTimeout(tooltipHideTimer);
-    tooltipHideTimer = window.setTimeout(hideInlineSubagentTooltip, 140);
+  function setPanelCollapsed(collapsed) {
+    panelCollapsed = collapsed;
+    contentShell.classList.toggle('panel-collapsed', collapsed);
+    agentPanel.setAttribute('aria-hidden', String(collapsed));
+    panelClosedLabel.hidden = !collapsed;
+    if (!collapsed) window.setTimeout(() => composerInput.focus({ preventScroll: true }), 240);
   }
 
-  function showInlineSubagentTooltip(taskId) {
-    const task = subagentTasks.get(taskId);
-    if (!task?.inlineAnchor?.isConnected) return;
-    window.clearTimeout(tooltipHideTimer);
-    tooltipTaskId = taskId;
-    inlineSubagentTooltipLabel.textContent = task.sourcePrompt || task.title;
-    inlineSubagentResolve.hidden = task.state !== 'done' || Boolean(task.aiBlock);
-    inlineSubagentTooltip.hidden = false;
-    const anchorRect = task.inlineAnchor.getBoundingClientRect();
-    const workspaceRect = documentWorkspace.getBoundingClientRect();
-    const maxLeft = workspaceRect.width - inlineSubagentTooltip.offsetWidth - 12;
-    const preferredLeft = anchorRect.left - workspaceRect.left
-      + (anchorRect.width - inlineSubagentTooltip.offsetWidth) / 2;
-    inlineSubagentTooltip.style.left = `${clamp(preferredLeft, 12, maxLeft)}px`;
-    inlineSubagentTooltip.style.top = `${anchorRect.top - workspaceRect.top - inlineSubagentTooltip.offsetHeight - 8}px`;
-  }
-
-  function resolveInlineSubagent(taskId) {
-    const task = subagentTasks.get(taskId);
-    if (!task || task.state !== 'done' || !task.inlineAnchor?.isConnected) return;
-    const anchor = task.inlineAnchor;
-    task.statusElement?.remove();
-    task.statusElement = null;
-    if (!task.statusHost?.querySelector('.inline-subagent-margin-status')) {
-      task.statusHost?.classList.remove('inline-subagent-status-host');
-    }
-    task.statusHost = null;
-    if (isInteractionB && anchor.classList.contains('ai-chip')) {
-      anchor.remove();
-    } else if (anchor.classList.contains('is-selection-anchor')) {
-      if (anchor.matches('span')) anchor.replaceWith(...anchor.childNodes);
-      else anchor.classList.remove('inline-subagent-anchor', 'is-selection-anchor');
-    } else {
-      anchor.closest('.inline-subagent-placeholder')?.remove();
-    }
-    task.inlineAnchor = null;
-    task.targets = [];
-    hideInlineSubagentTooltip();
-    showToast('AI task resolved');
-  }
-
-  function positionStatusAtDocumentGutter(status, host) {
-    if (isInteractionB || !status?.isConnected || !host?.isConnected) return;
-    const pageRect = documentPage.getBoundingClientRect();
-    const pagePadding = Number.parseFloat(getComputedStyle(documentPage).paddingLeft) || 0;
-    const contentLeft = pageRect.left + pagePadding;
-    status.style.left = `${contentLeft - host.getBoundingClientRect().left - 34}px`;
-  }
-
-  function positionInlineSubagentMarginStatus(task) {
-    const anchor = task.inlineAnchor;
-    const status = task.statusElement;
-    const host = task.statusHost;
-    if (!anchor?.isConnected || !status?.isConnected || !host?.isConnected) return;
-    const lineRect = anchor.getClientRects()[0] || anchor.getBoundingClientRect();
-    const hostRect = host.getBoundingClientRect();
-    positionStatusAtDocumentGutter(status, host);
-    status.style.top = `${Math.max(0, lineRect.top - hostRect.top + (lineRect.height - 24) / 2)}px`;
-  }
-
-  function positionInlineSubagentMarginStatuses() {
-    subagentTasks.forEach((task) => {
-      positionInlineSubagentMarginStatus(task);
-      positionStatusAtDocumentGutter(task.documentMarker, task.documentTarget);
+  function setMode(nextMode, { silent = false } = {}) {
+    mode = nextMode;
+    modeLabel.textContent = nextMode === 'edit' ? 'Edit' : 'Ask';
+    modeTrigger.dataset.mode = nextMode;
+    modeMenu.querySelectorAll('[data-mode]').forEach((button) => {
+      button.querySelector('.mode-check').textContent = button.dataset.mode === nextMode ? '✓' : '';
     });
+    modeMenu.hidden = true;
+    modeTrigger.setAttribute('aria-expanded', 'false');
+    if (!silent) showToast(`${modeLabel.textContent} mode`);
   }
 
-  function linkInlineSubagentAnchor(anchor, taskId) {
-    const task = subagentTasks.get(taskId);
-    anchor.classList.add('inline-subagent-anchor');
-    anchor.dataset.taskId = taskId;
-    anchor.tabIndex = 0;
-    anchor.setAttribute('role', 'button');
-    anchor.setAttribute('aria-label', 'Open associated subagent');
-    const status = createAiTaskStatus();
-    const statusHost = !isInteractionB && anchor.matches('span')
-      ? anchor.closest('p, li, blockquote, h1, h2, figcaption')
-      : null;
-    if (statusHost) {
-      status.classList.add('inline-subagent-margin-status');
-      statusHost.classList.add('inline-subagent-status-host');
-      statusHost.append(status);
-      if (task) task.statusHost = statusHost;
-      positionInlineSubagentMarginStatus({ inlineAnchor: anchor, statusElement: status, statusHost });
-    } else if (isInteractionB && anchor.classList.contains('ai-chip')) anchor.append(status);
-    else {
-      anchor.prepend(status);
-      positionStatusAtDocumentGutter(status, anchor);
-    }
-    if (task) task.statusElement = status;
-    anchor.addEventListener('pointerdown', (event) => event.preventDefault());
-    anchor.addEventListener('mouseenter', () => showInlineSubagentTooltip(taskId));
-    anchor.addEventListener('mouseleave', scheduleInlineSubagentTooltipHide);
-    anchor.addEventListener('focus', () => showInlineSubagentTooltip(taskId));
-    anchor.addEventListener('blur', scheduleInlineSubagentTooltipHide);
-    anchor.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      hideInlineSubagentTooltip();
-      if (task?.state === 'done') clearAiTaskStatusDot(status);
-      openSubagentDetail(taskId);
-    });
-    anchor.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      if (task?.state === 'done') clearAiTaskStatusDot(status);
-      openSubagentDetail(taskId);
-    });
+  function toolButton(icon, label, handler) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', label);
+    const image = document.createElement('img');
+    image.src = icon;
+    image.alt = '';
+    button.append(image);
+    if (handler) button.addEventListener('click', handler);
+    return button;
   }
 
-  function populateAiChip(chip) {
-    chip.classList.add('ai-chip');
-    const icon = document.createElement('img');
-    icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
-    icon.alt = '';
-    const label = document.createElement('span');
-    label.textContent = 'Dot';
-    chip.replaceChildren(icon, label);
-  }
-
-  function createAiChip() {
-    const chip = document.createElement('span');
-    chip.contentEditable = 'false';
-    populateAiChip(chip);
-    return chip;
-  }
-
-  function launchLinkedSubagent(prompt, anchor, selectedText = '') {
-    const resultText = searchAnswerFor(prompt, selectedText).summary;
-    const title = titleFromPrompt(prompt);
-    const taskId = setSubagentActive(title, 'Understanding the request', {
-      kind: 'research',
-      accent: 'blue',
-      targets: anchor,
-      documentTarget: false,
-      documentAnchor: anchor,
-      resultTitle: /competitor|竞品/i.test(prompt) ? 'Competitor Search Results' : 'Research findings',
-      resultText,
-      sourcePrompt: prompt,
-    });
-    const task = subagentTasks.get(taskId);
-    task.inlineAnchor = anchor;
-    linkInlineSubagentAnchor(anchor, taskId);
-    window.setTimeout(() => {
-      if (task.state !== 'thinking') return;
-      updateSubagentTask(taskId, { state: 'working', detail: 'Working on your request' });
-    }, 450);
-    window.setTimeout(() => {
-      if (task.state === 'done') return;
-      setSubagentDone(title, 'Ready to review', anchor, taskId);
-      completeAiTaskStatus(task.statusElement);
-      anchor.classList.add('is-complete');
-      if (tooltipTaskId === taskId) showInlineSubagentTooltip(taskId);
-    }, 3200);
-    return taskId;
-  }
-
-  function runMainLinkedSubagent(prompt) {
-    const host = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
-    const replacedBlock = mainPromptReplacedBlock;
-    const insertionRange = mainPromptInsertionRange;
-    mainPromptAnchorBlock = null;
-    mainPromptReplacedBlock = null;
-    mainPromptInsertionRange = null;
-    mainPrompt.hidden = true;
-    documentWorkspace.append(mainPrompt);
-    mainPromptInput.value = '';
-    mainPromptIntentOverride = null;
-    closePromptIntentMenus();
-    syncMainPromptState();
-    let anchor;
-    if (isInteractionB) {
-      anchor = createAiChip();
-      if (host && replacedBlock) {
-        replacedBlock.replaceChildren(anchor);
-        host.replaceWith(replacedBlock);
-      } else if (insertionRange?.startContainer?.isConnected && documentPage.contains(insertionRange.startContainer)) {
-        host?.remove();
-        insertionRange.insertNode(anchor);
-      } else {
-        const paragraph = document.createElement('p');
-        paragraph.className = 'inline-subagent-chip-line';
-        paragraph.append(anchor);
-        if (host) host.replaceWith(paragraph);
-        else documentPage.append(paragraph);
-      }
-    } else {
-      const paragraph = document.createElement('p');
-      paragraph.className = 'inline-subagent-placeholder';
-      anchor = document.createElement('span');
-      anchor.textContent = prompt;
-      anchor.contentEditable = 'false';
-      paragraph.append(anchor);
-      if (host) host.replaceWith(paragraph);
-      else documentPage.append(paragraph);
-    }
-    const taskId = launchLinkedSubagent(prompt, anchor);
-    routeSearchToAgentSession(taskId);
-    showToast('Subagent started');
-  }
-
-  function runMainInlineEdit(prompt) {
-    const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
-    mainPromptAnchorBlock = null;
-    mainPromptReplacedBlock = null;
-    mainPromptInsertionRange = null;
-    mainPrompt.hidden = true;
-    documentWorkspace.append(mainPrompt);
-    mainPromptInput.value = '';
-    mainPromptIntentOverride = null;
-    closePromptIntentMenus();
-    syncMainPromptState();
-    const kinds = detectDemoTasks(prompt);
-    const anchoredTargets = createAnchoredTaskTargets(kinds, anchorBlock);
-    kinds.forEach((kind) => startDemoSubagent(
-      kind,
-      kinds.length === 1 && kind === 'summary' ? titleFromPrompt(prompt) : '',
-      anchoredTargets.get(kind) || null,
-      prompt,
-    ));
-    subagentMenu.hidden = true;
-    subagentEntry.setAttribute('aria-expanded', 'false');
-    const lastAnchoredTarget = [...anchoredTargets.values()].at(-1)?.container;
-    if (lastAnchoredTarget) placeCaretAfter(lastAnchoredTarget);
-    else documentSurface.focus({ preventScroll: true });
-    showToast(kinds.length > 1 ? `${kinds.length} subagents started` : 'Subagent started');
-  }
-
-  function classifyAgentIntent(prompt) {
-    const normalized = prompt.trim().toLowerCase();
-    const searchSignals = [
-      /\b(search|find|look up|research|browse|source|cite|citation|latest|current|news|online|web)\b/,
-      /(搜索|搜一下|查找|查询|检索|调研|资料|来源|引用|最新|新闻|网上|网页)/,
-    ];
-    const writingSignals = [
-      /\b(write|draft|rewrite|expand|continue|summarize|polish|edit|journal|diary|grammar|proofread)\b/,
-      /(写|改写|扩写|续写|摘要|总结|润色|日记|语病|校对|编辑)/,
-    ];
-    if (searchSignals.some((pattern) => pattern.test(normalized))) return 'search';
-    if (writingSignals.some((pattern) => pattern.test(normalized))) return 'writing';
-    return 'writing';
-  }
-
-  function syncPromptIntent(input, button, override = null) {
-    const hasInput = Boolean(input.value.trim());
-    const intent = override || classifyAgentIntent(input.value);
-    const isSearch = intent === 'search';
-    button.hidden = !hasInput;
-    button.dataset.intent = intent;
-    button.classList.toggle('is-overridden', Boolean(override));
-    button.querySelector('span').textContent = isSearch ? 'Ask in chat' : 'Write here';
-    button.setAttribute('aria-label', `${isSearch ? 'Ask in Agent Chat' : 'Write in document'}. Click to switch destination.`);
-    button.title = override ? 'Destination selected manually' : 'Destination detected from your request';
-    button.parentElement.querySelectorAll('[data-intent-option]').forEach((option) => {
-      option.setAttribute('aria-selected', String(option.dataset.intentOption === intent));
-    });
-    return intent;
-  }
-
-  function closePromptIntentMenus() {
-    [mainPromptIntent, selectionPromptIntent].forEach((button) => {
-      button.parentElement.querySelector('.prompt-intent-menu').hidden = true;
-      button.setAttribute('aria-expanded', 'false');
-    });
-  }
-
-  function bindPromptIntentMenu(input, button, kind) {
-    const menu = button.parentElement.querySelector('.prompt-intent-menu');
-    button.addEventListener('click', () => {
-      const opening = menu.hidden;
-      closePromptIntentMenus();
-      menu.hidden = !opening;
-      button.setAttribute('aria-expanded', String(opening));
-    });
-    menu.querySelectorAll('[data-intent-option]').forEach((option) => {
-      option.addEventListener('click', () => {
-        const intent = option.dataset.intentOption;
-        if (kind === 'selection') selectionPromptIntentOverride = intent;
-        else mainPromptIntentOverride = intent;
-        syncPromptIntent(input, button, intent);
-        closePromptIntentMenus();
-        input.focus({ preventScroll: true });
-      });
-    });
-  }
-
-  function quoteLabel(text) {
-    return text.replace(/\s+/g, ' ').trim();
-  }
-
-  function revealAgentQuote(target = activeAgentQuote?.target) {
-    if (!(target instanceof Element) || !target.isConnected) {
-      showToast('The quoted text is no longer in the document');
-      return;
-    }
-    closeSubagentWorkspace();
-    window.clearTimeout(quoteHighlightTimer);
-    target.classList.remove('quote-target-highlight');
-    target.getBoundingClientRect();
-    target.classList.add('quote-target-highlight');
-    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    quoteHighlightTimer = window.setTimeout(() => target.classList.remove('quote-target-highlight'), 1400);
-    showToast('Jumped to quoted text');
-  }
-
-  function createAgentQuoteChip(text, target) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'quote-chip message-quote-chip';
-    chip.setAttribute('aria-label', 'Jump to quoted text');
-    chip.title = text;
-    chip.innerHTML = '<span class="quote-reference-icon" aria-hidden="true"><img src="assets/figma/quote-reference-base.svg" alt=""></span><span class="quote-chip-label"></span>';
-    chip.querySelector('.quote-chip-label').textContent = quoteLabel(text);
-    chip.addEventListener('click', () => revealAgentQuote(target));
-    return chip;
-  }
-
-  function syncComposerQuote(quote = null) {
-    activeAgentQuote = quote?.text && quote?.target ? quote : null;
-    composerQuoteChip.hidden = !activeAgentQuote;
-    composerQuoteLabel.textContent = activeAgentQuote ? quoteLabel(activeAgentQuote.text) : '';
-    composerQuoteChip.title = activeAgentQuote?.text || '';
-  }
-
-  function createAgentMessageActions(primaryActionLabel = 'Search again') {
+  function createToolbox(record) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
-    [
-      ['agent-refresh.svg', primaryActionLabel],
-      ['agent-thumbs-up.svg', 'Helpful response'],
-      ['agent-thumbs-down.svg', 'Unhelpful response'],
-      ['agent-copy.svg', 'Copy response'],
-    ].forEach(([icon, label]) => {
+    actions.append(
+      toolButton('assets/figma/agent-refresh.svg', 'Regenerate answer', () => showToast('Response regenerated')),
+      toolButton('assets/figma/agent-thumbs-up.svg', 'Good response', () => showToast('Feedback saved')),
+      toolButton('assets/figma/agent-thumbs-down.svg', 'Poor response', () => showToast('Feedback saved')),
+      toolButton('assets/figma/agent-copy.svg', 'Copy answer', async () => {
+        await navigator.clipboard?.writeText(record.text);
+        showToast('Copied');
+      }),
+    );
+
+    if (record.mode === 'edit') {
+      actions.append(toolButton('assets/figma/selection-review-undo.svg', 'Undo edit', () => undoRecord(record)));
+    }
+    actions.append(toolButton('assets/figma/subagent-open.svg', 'Work in new subagent', () => openSubagentForRecord(record)));
+    return actions;
+  }
+
+  function addUserMessage(text, options = {}) {
+    emptySuggestions.hidden = true;
+    const record = {
+      id: `message-${++messageSequence}`,
+      role: 'user',
+      text,
+      mode,
+      context: options.context || '',
+      anchor: options.anchor || null,
+      subagentTaskId: options.subagentTaskId || null,
+    };
+    messageStore.push(record);
+    const article = document.createElement('article');
+    article.className = 'message user';
+    article.dataset.messageId = record.id;
+    const body = document.createElement('div');
+    body.className = 'message-copy';
+    body.textContent = text;
+    if (record.context) {
+      const context = document.createElement('div');
+      context.className = 'message-context';
+      context.innerHTML = '<img src="assets/figma/agent-file-text.svg" alt="" /><span class="message-context-preview"></span><span class="message-context-full"></span>';
+      bindExpandableContext(context, record.context);
+      article.prepend(context);
+    }
+    article.append(body);
+    conversation.append(article);
+    bindPendingAnchor(options.anchor, record);
+    scrollConversation();
+    return record;
+  }
+
+  function addWorkingMessage() {
+    emptySuggestions.hidden = true;
+    const article = document.createElement('article');
+    article.className = 'message assistant working-message';
+    article.textContent = 'Working...';
+    conversation.append(article);
+    scrollConversation();
+    return article;
+  }
+
+  function addAssistantMessage(text, options = {}) {
+    // The edit sentence belongs in the document. It must never become a second
+    // assistant message in the main or subagent conversation.
+    if (text === copy.summaryEdit) return null;
+
+    const sourceUser = options.sourceUserId
+      ? messageStore.find((item) => item.id === options.sourceUserId)
+      : [...messageStore].reverse().find((item) => {
+        if (item.role !== 'user') return false;
+        const taskId = options.subagentTaskId || options.taskId || activeTaskId;
+        return taskId ? item.subagentTaskId === taskId : !item.subagentTaskId;
+      });
+    const record = {
+      id: `message-${++messageSequence}`,
+      role: 'assistant',
+      text,
+      mode: options.mode || mode,
+      undo: options.undo || null,
+      undone: false,
+      taskId: options.taskId || null,
+      subagentTaskId: options.subagentTaskId || options.taskId || null,
+      title: options.title || '',
+      meta: options.meta || '',
+      intent: options.intent || null,
+      anchor: options.anchor || null,
+      sourceUserId: sourceUser?.id || null,
+    };
+    if (options.persist !== false) messageStore.push(record);
+
+    const article = document.createElement('article');
+    article.className = 'message assistant';
+    article.dataset.messageId = record.id;
+    if (record.meta) {
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      meta.textContent = record.meta;
+      article.append(meta);
+    }
+    const body = document.createElement('div');
+    body.className = 'message-copy';
+    if (record.title) {
+      const title = document.createElement('strong');
+      title.textContent = record.title;
+      body.append(title);
+    }
+    body.append(document.createTextNode(text));
+    article.append(body);
+
+    if (record.intent || (record.subagentTaskId && !activeTaskId)) article.append(createIntentActions(record));
+
+    article.append(createToolbox(record));
+    conversation.append(article);
+    bindPendingAnchor(options.anchor, record);
+    scrollConversation();
+    return record;
+  }
+
+  function renderMainRecord(record) {
+    const article = document.createElement('article');
+    article.className = `message ${record.role}`;
+    article.dataset.messageId = record.id;
+    if (record.role === 'user') {
+      if (record.context) {
+        const context = document.createElement('div');
+        context.className = 'message-context';
+        context.innerHTML = '<img src="assets/figma/agent-file-text.svg" alt="" /><span class="message-context-preview"></span><span class="message-context-full"></span>';
+        bindExpandableContext(context, record.context);
+        article.append(context);
+      }
+      const body = document.createElement('div');
+      body.className = 'message-copy';
+      body.textContent = record.text;
+      article.append(body);
+      return article;
+    }
+
+    if (record.meta) {
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      meta.textContent = record.meta;
+      article.append(meta);
+    }
+    const body = document.createElement('div');
+    body.className = 'message-copy';
+    if (record.title) {
+      const title = document.createElement('strong');
+      title.textContent = record.title;
+      body.append(title);
+    }
+    body.append(document.createTextNode(record.text));
+    article.append(body);
+    if (record.intent || (record.subagentTaskId && !activeTaskId)) article.append(createIntentActions(record));
+    article.append(createToolbox(record));
+    if (record.undone) article.classList.add('is-undone');
+    return article;
+  }
+
+  function createIntentActions(record) {
+    const actions = document.createElement('div');
+    actions.className = 'intent-actions';
+
+    // Once the user starts a subagent, the action becomes a link to that
+    // session when the main session is rendered again.
+    // The main session uses this as a link back into a task. Inside the task
+    // itself, render the record's actual intent instead of another session link.
+    if (record.subagentTaskId && !activeTaskId) {
+      const task = taskStore.get(record.subagentTaskId);
+      if (task) {
+        const sessionLink = document.createElement('button');
+        sessionLink.type = 'button';
+        sessionLink.className = 'subagent-session-link';
+        sessionLink.setAttribute('aria-label', `Open subagent session ${task.title}`);
+        const icon = document.createElement('img');
+        icon.src = 'assets/figma/agent-document.svg';
+        icon.alt = '';
+        const title = document.createElement('span');
+        title.textContent = task.title;
+        sessionLink.append(icon, title);
+        sessionLink.addEventListener('click', () => showTask(task.id));
+        actions.append(sessionLink);
+        return actions;
+      }
+    }
+
+    const intents = Array.isArray(record.intent) ? record.intent : [record.intent];
+    intents.forEach((intent) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.setAttribute('aria-label', label);
-      button.innerHTML = `<img src="assets/figma/${icon}" alt="">`;
-      button.addEventListener('click', () => showToast(label));
+      button.className = `intent-button${intent.primary ? ' primary' : ''}`;
+      button.textContent = intent.label;
+      button.addEventListener('click', () => intent.action(record, button));
       actions.append(button);
     });
     return actions;
   }
 
-  function showSubagentStartInMainChat(task) {
-    const entry = document.createElement('article');
-    entry.className = 'agent-chat-task';
-    entry.dataset.taskId = task.id;
-    if (task.sourcePrompt) {
-      const requestGroup = document.createElement('div');
-      requestGroup.className = 'agent-search-request';
-      const request = document.createElement('div');
-      request.className = 'user-message';
-      request.textContent = task.sourcePrompt;
-      requestGroup.append(request);
-      entry.append(requestGroup);
-    }
-
-    const message = document.createElement('div');
-    message.className = 'assistant-message subagent-start-message';
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'subagent-chat-link';
-    link.setAttribute('aria-label', `Open ${task.title} subagent`);
-    const icon = document.createElement('img');
-    icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
-    icon.alt = '';
-    const name = document.createElement('span');
-    name.textContent = 'Dotwise';
-    link.append(icon, name);
-    link.addEventListener('click', () => openSubagentDetail(task.id));
-    const copy = document.createElement('span');
-    copy.textContent = 'subagent begins working';
-    message.append(link, copy);
-    entry.append(message, createAgentMessageActions());
-    agentAskChatBlock.append(entry);
-    agentAskChatBlock.hidden = false;
-    task.chatEntry = entry;
-  }
-
-  function searchAnswerFor(prompt, quotedText = '') {
-    const lower = prompt.toLowerCase();
-    if (/(notion|笔记|note)/.test(lower)) {
-      return {
-        summary: quotedText
-          ? 'Using the selected passage as context, I found a useful pattern across current note-taking guidance: capture the smallest meaningful unit first, then add context only when it helps the idea move forward.'
-          : 'I found a useful pattern across current note-taking guidance: capture the smallest meaningful unit first, then add context only when it helps the idea move forward.',
-        points: ['Keep capture friction low.', 'Separate collecting from organizing.', 'Turn recurring notes into a concrete next action.'],
-      };
-    }
-    return {
-      summary: quotedText
-        ? 'I carried the selected passage into this search so the findings stay grounded in the part of the document you were working on. Here is a concise research pass you can continue in this session.'
-        : 'I reviewed this request in a separate subagent so the document draft stays uninterrupted. Here is a concise research pass you can continue exploring.',
-      points: ['Start with the most recent primary sources.', 'Compare at least two independent references.', 'Bring only the verified findings back into the document.'],
-    };
-  }
-
-  function routeSearchToAgentSession(taskId, quote = null) {
-    setAgentPanelCollapsed(false, { focus: false });
-    closeSubagentWorkspace();
-    const anchorBlock = mainPromptAnchorBlock?.isConnected ? mainPromptAnchorBlock : null;
-    mainPromptAnchorBlock = null;
-    mainPromptReplacedBlock = null;
-    mainPrompt.hidden = true;
-    documentWorkspace.append(mainPrompt);
-    anchorBlock?.remove();
-    mainPromptInput.value = '';
-    mainPromptIntentOverride = null;
-    syncMainPromptState();
-    syncComposerQuote(quote);
-    const task = subagentTasks.get(taskId);
-    const requestGroup = task?.chatEntry?.querySelector('.agent-search-request');
-    if (quote && requestGroup) requestGroup.prepend(createAgentQuoteChip(quote.text, quote.target));
-    agentPanel.classList.add('is-receiving-search');
-    window.setTimeout(() => agentPanel.classList.remove('is-receiving-search'), 520);
-    agentConversation.scrollTo({ top: agentConversation.scrollHeight, behavior: 'smooth' });
-  }
-
-  function routeSelectionSearchToAgentSession(prompt) {
-    selectionPrompt.hidden = true;
-    selectionPromptInput.value = '';
-    selectionPromptIntentOverride = null;
-    closePromptIntentMenus();
-    selectionMarker = selectionMarker?.isConnected ? selectionMarker : markStoredSelection();
-    selectionMarker?.classList.remove('agent-selection', 'is-working', 'quote-target-highlight');
-    selectionMarker?.classList.add('agent-quote-anchor', 'is-selection-anchor');
-    window.getSelection()?.removeAllRanges();
-    const quote = {
-      text: selectionRequest,
-      target: selectionMarker || selectionAnchor || selectableCopy,
-    };
-    let chip = null;
-    if (isInteractionB) {
-      chip = createAiChip();
-      if (selectionMarker?.matches('span')) selectionMarker.insertAdjacentElement('afterend', chip);
-      else quote.target.append(chip);
-    }
-    storedRange = null;
-    selectionAnchor = null;
-    selectionMarker = null;
-    selectionRequest = '';
-    const taskId = launchLinkedSubagent(prompt, chip || quote.target, quote.text);
-    routeSearchToAgentSession(taskId, quote);
-  }
-
-  function submitMainAgentPrompt(prompt, intent = classifyAgentIntent(prompt)) {
-    if (intent === 'search') runMainLinkedSubagent(prompt);
-    else runMainInlineEdit(prompt);
-  }
-
-  function positionFloating(element, viewportRect, preferredWidth) {
-    const workspaceRect = documentWorkspace.getBoundingClientRect();
-    const width = Math.min(preferredWidth, workspaceRect.width - 32);
-    const height = element.offsetHeight || 56;
-    const left = clamp(viewportRect.left - workspaceRect.left + viewportRect.width / 2 - width / 2, 16, workspaceRect.width - width - 16);
-    const top = clamp(viewportRect.bottom - workspaceRect.top + 8, 332, workspaceRect.height - height - 12);
-    element.style.left = `${left}px`;
-    element.style.top = `${top}px`;
-    element.style.width = `${width}px`;
-  }
-
-  function positionSelectionReview() {
-    if (selectionReview.hidden || !generatedPreview?.isConnected) return;
-    const targetRect = generatedPreview.getBoundingClientRect();
-    const workspaceRect = documentWorkspace.getBoundingClientRect();
-    const scrollerRect = documentSurface.getBoundingClientRect();
-    const width = Math.min(395, workspaceRect.width - 32);
-    const left = clamp(
-      targetRect.left - workspaceRect.left + targetRect.width / 2 - width / 2,
-      16,
-      workspaceRect.width - width - 16,
-    );
-    const preferredTop = targetRect.bottom - workspaceRect.top + 8;
-    const visibleTop = scrollerRect.top - workspaceRect.top + 8;
-    const visibleBottom = scrollerRect.bottom - workspaceRect.top - 48;
-    selectionReview.style.left = `${left}px`;
-    selectionReview.style.top = `${clamp(preferredTop, visibleTop, visibleBottom)}px`;
-    selectionReview.style.width = `${width}px`;
-    selectionReview.classList.toggle(
-      'is-anchor-outside',
-      targetRect.bottom < scrollerRect.top || targetRect.top > scrollerRect.bottom,
-    );
-  }
-
-  function scheduleSelectionReviewPosition() {
-    window.cancelAnimationFrame(selectionReviewPositionFrame);
-    selectionReviewPositionFrame = window.requestAnimationFrame(positionSelectionReview);
-  }
-
-  function selectionBelongsToDocument(range) {
-    const ancestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-      ? range.commonAncestorContainer
-      : range.commonAncestorContainer.parentElement;
-    return ancestor && documentPage.contains(ancestor) && !ancestor.closest?.('[contenteditable="false"]');
-  }
-
-  function detectSelection() {
-    if (!mainPrompt.hidden || !selectionReview.hidden) return;
-    if (selectionPromptEngaged) return;
-    if (document.activeElement === selectionPromptInput) return;
-
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+  function undoRecord(record) {
+    const sourceRecord = messageStore.find((item) => item.id === record.id) || record;
+    if (sourceRecord.undone) {
+      showToast('This edit is already undone');
       return;
     }
-
-    const text = selection.toString().trim();
-    if (text.length < 2) return;
-    const range = selection.getRangeAt(0);
-    if (!selectionBelongsToDocument(range)) return;
-
-    const rect = range.getBoundingClientRect();
-    if (!rect.width && !rect.height) return;
-    if (selectionMarker && !generatedPreview) unwrapMarker();
-    storedRange = range.cloneRange();
-    selectionRequest = text;
-    selectionMarker = markStoredSelection();
-    selectionAnchor = selectionMarker;
-    window.getSelection()?.removeAllRanges();
-    selectionPromptInput.value = '';
-    selectionPromptIntentOverride = null;
-    syncPromptIntent(selectionPromptInput, selectionPromptIntent, null);
-    selectionPrompt.hidden = false;
-    positionFloating(selectionPrompt, rect, 480);
+    sourceRecord.undo?.();
+    sourceRecord.undone = true;
+    const article = conversation.querySelector(`[data-message-id="${record.id}"]`);
+    article?.classList.add('is-undone');
+    showToast('Edit undone');
   }
 
-  function scheduleSelectionDetection(delay = 140) {
-    window.clearTimeout(detectSelection.timer);
-    detectSelection.timer = window.setTimeout(detectSelection, delay);
+  function preserveDocumentTextStyle(span, source) {
+    if (!span || !source) return span;
+    const style = window.getComputedStyle(source);
+    span.style.fontFamily = style.fontFamily;
+    span.style.fontSize = style.fontSize;
+    span.style.fontWeight = style.fontWeight;
+    span.style.fontStyle = style.fontStyle;
+    span.style.lineHeight = style.lineHeight;
+    span.style.letterSpacing = style.letterSpacing;
+    return span;
   }
 
-  function unwrapMarker() {
-    if (!selectionMarker) return;
-    if (selectionMarker.matches('span.agent-selection, span.agent-quote-anchor') && selectionMarker.parentNode) {
-      selectionMarker.replaceWith(...selectionMarker.childNodes);
-    } else {
-      selectionMarker.classList.remove('agent-selection', 'agent-quote-anchor', 'is-working', 'quote-target-highlight');
+  function restoreEditOrigin(origin, span) {
+    if (!origin) return;
+    if (origin.target) {
+      origin.target.innerHTML = origin.html;
+      return;
     }
-    selectionMarker = null;
+    if (origin.node) span.replaceWith(origin.node);
   }
 
-  function markStoredSelection(isWorking = false) {
-    if (!storedRange) return null;
-    const marker = document.createElement('span');
-    marker.className = `agent-selection${isWorking ? ' is-working' : ''}`;
-    try {
-      storedRange.surroundContents(marker);
-      return marker;
-    } catch (error) {
-      const startElement = storedRange.startContainer.nodeType === Node.ELEMENT_NODE
-        ? storedRange.startContainer
-        : storedRange.startContainer.parentElement;
-      const endElement = storedRange.endContainer.nodeType === Node.ELEMENT_NODE
-        ? storedRange.endContainer
-        : storedRange.endContainer.parentElement;
-      const startBlock = startElement?.closest('p, blockquote, li, h1, h2');
-      const endBlock = endElement?.closest('p, blockquote, li, h1, h2');
-      if (startBlock && startBlock === endBlock) {
-        try {
-          marker.append(storedRange.extractContents());
-          storedRange.insertNode(marker);
-          return marker;
-        } catch (rangeError) {
-          // Fall back to block highlighting when the browser cannot extract the range.
+  function setEditOrigin(span, origin) {
+    // Keep the first unedited version with each generated span. Subsequent
+    // rewrites inherit it so every Undo returns to the original document.
+    span.dotwiseEditOrigin = origin;
+    return span;
+  }
+
+  function makeTextEdit(target, text) {
+    const previous = target.innerHTML;
+    const span = document.createElement('span');
+    span.className = 'document-edit agent-anchor';
+    span.textContent = text;
+    preserveDocumentTextStyle(span, target);
+    setEditOrigin(span, { target, html: previous });
+    target.append(document.createTextNode(' '), span);
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return { undo: () => restoreEditOrigin(span.dotwiseEditOrigin, span), anchor: span };
+  }
+
+  function replaceTextEdit(target, text) {
+    const previous = target.innerHTML;
+    const priorOrigin = target.querySelector('.document-edit')?.dotwiseEditOrigin;
+    target.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'document-edit agent-anchor';
+    span.textContent = text;
+    preserveDocumentTextStyle(span, target);
+    setEditOrigin(span, priorOrigin || { target, html: previous });
+    target.append(span);
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return { undo: () => restoreEditOrigin(span.dotwiseEditOrigin, span), anchor: span };
+  }
+
+  function replaceSelectedEdit(range, text) {
+    if (!range) return null;
+    const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    const selectedAnchor = container?.closest?.('.agent-anchor');
+    if (selectedAnchor && documentPage.contains(selectedAnchor)) {
+      const span = document.createElement('span');
+      span.className = 'document-edit agent-anchor';
+      span.textContent = text;
+      preserveDocumentTextStyle(span, selectedAnchor);
+      setEditOrigin(span, selectedAnchor.dotwiseEditOrigin || { node: selectedAnchor });
+      selectedAnchor.replaceWith(span);
+      span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return {
+        undo: () => restoreEditOrigin(span.dotwiseEditOrigin, span),
+        anchor: span,
+      };
+    }
+    const target = editableBlockForRange(range) || introCopy;
+    if (!target) return null;
+    const previous = target.innerHTML;
+    range.deleteContents();
+    const span = document.createElement('span');
+    span.className = 'document-edit agent-anchor';
+    span.textContent = text;
+    preserveDocumentTextStyle(span, target);
+    setEditOrigin(span, { target, html: previous });
+    range.insertNode(span);
+    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return { undo: () => restoreEditOrigin(span.dotwiseEditOrigin, span), anchor: span };
+  }
+
+  function editableBlockForRange(range) {
+    if (!range) return null;
+    const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    return container?.closest?.('p, h1, h2, li, blockquote') || null;
+  }
+
+  function shorterDocumentText(source) {
+    const text = source.trim().replace(/\s+/g, ' ');
+    const words = text.split(' ');
+    if (words.length <= 9) return text;
+    return `${words.slice(0, Math.max(7, Math.ceil(words.length * 0.55))).join(' ').replace(/[,:;]$/, '')}.`;
+  }
+
+  function longerDocumentText(source) {
+    const text = source.trim().replace(/\s+/g, ' ');
+    const ending = /[.!?]$/.test(text) ? '' : '.';
+    return `${text}${ending} This adds useful context while keeping the original idea clear and easy to revisit.`;
+  }
+
+  function titleFromPrompt(prompt) {
+    const clean = String(prompt || '').replace(/\s+/g, ' ').trim();
+    const lower = clean.toLowerCase();
+    if (lower.includes('short')) return 'Make the intro shorter';
+    if (lower.includes('long')) return 'Make the intro longer';
+    if (lower.includes('research') || lower.includes('competitor')) return 'Competitor Search Results';
+    if (lower.includes('format')) return 'Check document formats';
+    if (lower.includes('add a sentence') || lower.includes('add one sentence')) return 'Add a sentence to the intro';
+    if (lower.includes('summar')) return 'Summarize the intro';
+    if (clean) {
+      // Keep the task name grounded in the user's own request instead of
+      // assigning every new subagent the same generic summary title.
+      if (clean.length <= 48) return clean;
+      const shortened = clean.slice(0, 48).replace(/\s+\S*$/, '').trim();
+      return `${shortened || clean.slice(0, 48)}…`;
+    }
+    return 'New subagent';
+  }
+
+  function intentActions(prompt) {
+    return [
+      {
+        label: 'Work in new subagent',
+        primary: true,
+        action: (record) => openSubagentForRecord(record, prompt),
+      },
+    ];
+  }
+
+  function originatingUserRecord(record, prompt = '') {
+    if (record.sourceUserId) {
+      const source = messageStore.find((item) => item.id === record.sourceUserId);
+      if (source?.role === 'user') return source;
+    }
+    const recordIndex = messageStore.indexOf(record);
+    if (recordIndex < 0) return null;
+    const normalizedPrompt = prompt.trim().toLowerCase();
+    return messageStore.slice(0, recordIndex).reverse().find((item) => (
+      item.role === 'user' && (!normalizedPrompt || item.text.trim().toLowerCase() === normalizedPrompt)
+    )) || null;
+  }
+
+  // Both entry points—the intent button and the final response-toolbar icon—
+  // use this single transition so a task always inherits the same prompt,
+  // document context, anchors, and main-session state.
+  function openSubagentForRecord(record, requestedPrompt = '') {
+    const sourceRecord = messageStore.find((item) => item.id === record.id) || record;
+    if (sourceRecord.subagentTaskId) {
+      const existingTask = taskStore.get(sourceRecord.subagentTaskId);
+      if (existingTask) {
+        showTask(existingTask.id);
+        return;
+      }
+    }
+
+    const userRecord = originatingUserRecord(sourceRecord, requestedPrompt);
+    const prompt = userRecord?.text || requestedPrompt || record.text;
+    const context = userRecord?.context || '';
+    const task = createTask(titleFromPrompt(prompt), prompt, context);
+    // Keep the original main-session response as the task entry point. Any
+    // later messages created inside this task must stay out of the main feed.
+    task.entryMessageId = sourceRecord.id;
+    sourceRecord.subagentTaskId = task.id;
+    record.subagentTaskId = task.id;
+    userRecord?.anchor?.setAttribute('data-task-id', task.id);
+
+    // Research conversations move into the subagent. Regular edit
+    // conversations stay visible in main as the entry point to that task.
+    if (userRecord && (prompt.toLowerCase().includes('research') || prompt.toLowerCase().includes('competitor'))) {
+      userRecord.subagentTaskId = task.id;
+    }
+    record.anchor?.setAttribute('data-task-id', task.id);
+    showTask(task.id);
+  }
+
+  function resetComposerContext() {
+    selectionText = '';
+    selectionRange = null;
+    contextBar.querySelector('.selection-context')?.remove();
+  }
+
+  function submitSubagentPrompt(prompt) {
+    const taskId = activeTaskId;
+    const context = selectionText;
+    const range = selectionRange?.cloneRange?.() || null;
+    const anchor = wrapRangeAsAgentAnchor(range);
+    addUserMessage(prompt, { context, anchor, subagentTaskId: taskId });
+    resetComposerContext();
+    const working = addWorkingMessage();
+    const lower = prompt.toLowerCase();
+
+    window.setTimeout(() => {
+      working.remove();
+      if (mode === 'ask' && (lower.includes('research') || lower.includes('competitor'))) {
+          addAssistantMessage(copy.researchResult, {
+            mode: 'ask',
+            title: 'Competitor Search Results',
+            meta: 'worked for 1m 47s  ›',
+            subagentTaskId: taskId,
+        });
+        return;
+      }
+      if (mode === 'edit' && (lower.includes('research') || lower.includes('competitor'))) {
+        addAssistantMessage(copy.researchResult.split('\n\nNotion AI')[0], {
+          mode: 'edit',
+          title: 'Competitor Search Results',
+          meta: 'worked for 1m 47s  ›',
+          intent: switchToAskIntent(),
+          subagentTaskId: taskId,
+        });
+        return;
+      }
+      if (mode === 'ask') {
+        addAssistantMessage('I can discuss the document, compare alternatives, or research a direction without changing the page.', { mode: 'ask', subagentTaskId: taskId });
+        return;
+      }
+      addAssistantMessage(copy.summaryResponse, { mode: 'edit', subagentTaskId: taskId });
+    }, WORKING_PREVIEW_MS);
+  }
+
+  function submitPrompt(prompt) {
+    const context = selectionText;
+    const range = selectionRange?.cloneRange?.() || null;
+    const lower = prompt.toLowerCase();
+    // Any selected document text sent to the agent is now an interacted region,
+    // regardless of whether the response is an Ask explanation or an Edit.
+    const anchor = context ? wrapRangeAsAgentAnchor(range) : null;
+    addUserMessage(prompt, { context, anchor });
+    selectionText = '';
+    selectionRange = null;
+    contextBar.querySelector('.selection-context')?.remove();
+    sessionTitle.textContent = 'Edit dotwise introduction';
+    const working = addWorkingMessage();
+    window.setTimeout(() => {
+      working.remove();
+      if (mode === 'edit' && (lower.includes('research') || lower.includes('competitor'))) {
+        addAssistantMessage('This looks like a research task. I can keep it in the main conversation or open a separate subagent session.', {
+          mode: 'edit',
+          intent: intentActions(prompt),
+        });
+        return;
+      }
+
+      if (mode === 'ask') {
+        if (lower.includes('research') || lower.includes('competitor')) {
+          addAssistantMessage(copy.researchResult, { mode: 'ask', title: 'Competitor Search Results', meta: 'worked for 1m 47s  ›' });
+        } else if (context) {
+          addAssistantMessage(`I’m looking at the selected text: “${context}”\n\nI can explain it, compare alternatives, or help you decide what to change without editing the document.`, {
+            mode: 'ask',
+            intent: lower.includes('short') || lower.includes('long') ? switchToEditIntent() : null,
+          });
+        } else {
+          addAssistantMessage('I can discuss the document, compare alternatives, or research a direction without changing the page.', {
+            mode: 'ask',
+            intent: lower.includes('short') || lower.includes('long') ? switchToEditIntent() : null,
+          });
         }
+        return;
       }
-      const fallback = startBlock;
-      if (fallback && documentPage.contains(fallback)) {
-        fallback.classList.add('agent-selection');
-        fallback.classList.toggle('is-working', isWorking);
-        return fallback;
+
+      if (lower.includes('longer')) {
+        const editText = longerDocumentText(context || captureLead.textContent);
+        const edit = context ? replaceSelectedEdit(range, editText) : replaceTextEdit(captureLead, editText);
+        const record = addAssistantMessage(copy.longerResponse, { mode: 'edit', undo: edit?.undo });
+        if (edit?.anchor) bindAgentAnchor(edit.anchor, record);
+      } else if (lower.includes('short')) {
+        const editText = shorterDocumentText(context || captureLead.textContent);
+        const edit = context ? replaceSelectedEdit(range, editText) : replaceTextEdit(captureLead, editText);
+        const record = addAssistantMessage(copy.shorterResponse, { mode: 'edit', undo: edit?.undo });
+        if (edit?.anchor) bindAgentAnchor(edit.anchor, record);
+      } else if (lower.includes('format')) {
+        addAssistantMessage('I checked the visible document structure. The heading, body, quote, list, and gallery follow a consistent hierarchy.', { mode: 'edit', intent: intentActions(prompt), anchor });
+      } else {
+        // Adding a sentence never replaces the selected/caret paragraph. It
+        // appends the generated sentence to that paragraph and preserves it.
+        const edit = makeTextEdit(editableBlockForRange(range) || introCopy, copy.summaryEdit);
+        const record = addAssistantMessage(copy.summaryResponse, { mode: 'edit', undo: edit?.undo, intent: intentActions(prompt) });
+        if (edit?.anchor) bindAgentAnchor(edit.anchor, record);
       }
-      return null;
-    }
+    }, WORKING_PREVIEW_MS);
   }
 
-  function generateSelectionText(request) {
-    const lower = request.toLowerCase();
-    if (lower.includes('short') || lower.includes('concise')) {
-      return ' It captures the signal and gives the idea a clear next step.';
-    }
-    if (lower.includes('中文')) {
-      return ' 它把零散的信号连接到具体语境中，让尚未成形的想法获得继续生长的方向。';
-    }
-    return ' The best capture system is deliberately incomplete. Save the fragment before your brain turns it into a polished story, then return when a new connection gives it direction.';
+  function createTask(title, prompt, context = '') {
+    const task = {
+      id: `task-${++taskSequence}`,
+      title,
+      prompt,
+      context,
+      state: 'active',
+      startedAt: Date.now(),
+      completedAt: null,
+      unseen: false,
+      result: title.includes('Research') ? copy.researchResult : title.includes('shorter') ? copy.shorterResponse : copy.summaryResponse,
+    };
+    taskStore.set(task.id, task);
+    renderTasks();
+    window.setTimeout(() => completeTask(task.id), 5200 + taskSequence * 800);
+    return task;
   }
 
-  function beginSelectionEdit(request) {
-    const runId = ++selectionRun;
-    const completionText = generateSelectionText(request);
-    const taskTitle = titleFromPrompt(request) || 'Expand the selected text';
-    selectionPrompt.hidden = true;
-    selectionPromptIntentOverride = null;
-    closePromptIntentMenus();
-    selectionMarker = selectionMarker?.isConnected ? selectionMarker : markStoredSelection();
-    selectionMarker?.classList.add('is-working');
-    selectionAnchor = selectionMarker || selectableCopy;
-    window.getSelection()?.removeAllRanges();
+  function completeTask(taskId) {
+    const task = taskStore.get(taskId);
+    if (!task || task.state === 'done') return;
+    task.state = 'done';
+    task.completedAt = Date.now();
+    task.unseen = true;
+    completionDot.hidden = false;
+    renderTasks();
+    showToast(`${task.title} completed`);
+    if (activeTaskId === task.id) showTask(task.id, false);
+  }
 
-    generatedPreview = document.createElement('span');
-    generatedPreview.className = 'generated-preview is-working t-stream';
-    generatedPreview.contentEditable = 'false';
-    if (selectionMarker && selectionMarker.matches('span.agent-selection')) {
-      selectionMarker.insertAdjacentElement('afterend', generatedPreview);
-    } else {
-      selectionAnchor.append(generatedPreview);
-    }
-    cancelSelectionStream?.();
-    cancelSelectionStream = replayStream(generatedPreview, completionText, () => runId === selectionRun);
-    const selectionStateTarget = (selectionMarker?.matches?.('p, blockquote, li, h1, h2') ? selectionMarker : selectionMarker?.closest?.('p, blockquote, li, h1, h2'))
-      || (selectionAnchor?.matches?.('p, blockquote, li, h1, h2') ? selectionAnchor : selectionAnchor?.closest?.('p, blockquote, li, h1, h2'));
-    const taskId = setSubagentActive(taskTitle, 'Understanding the selected passage', {
-      kind: 'selection-edit',
-      accent: 'violet',
-      targets: generatedPreview,
-      documentTarget: isInteractionB ? false : selectionStateTarget,
-      documentAnchor: selectionMarker || selectionAnchor,
-      resultTitle: 'Selected text updated',
-      resultText: completionText.trim(),
-      sourcePrompt: request,
+  function elapsed(task) {
+    const end = task.completedAt || Date.now();
+    const seconds = Math.max(1, Math.floor((end - task.startedAt) / 1000));
+    if (task.state === 'done') return '1m ago';
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return minutes ? `${minutes}m ${remainder}s` : `${remainder}s`;
+  }
+
+  function renderTasks() {
+    const tasks = [...taskStore.values()];
+    const active = tasks.filter((task) => task.state === 'active');
+    const done = tasks.filter((task) => task.state === 'done');
+    activeTaskCount.textContent = String(active.length);
+    doneTaskCount.textContent = String(done.length);
+    activeTaskList.replaceChildren(...active.map(createTaskRow));
+    doneTaskList.replaceChildren(...done.map(createTaskRow));
+    completionDot.hidden = !tasks.some((task) => task.unseen);
+  }
+
+  function createTaskRow(task) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `task-row${activeTaskId === task.id ? ' current' : ''}`;
+    const title = document.createElement('strong');
+    title.textContent = task.title;
+    const time = document.createElement('time');
+    time.textContent = task.state === 'done' ? '1m ago' : elapsed(task);
+    button.append(title, time);
+    button.addEventListener('click', () => showTask(task.id));
+    return button;
+  }
+
+  function showTask(taskId, markSeen = true) {
+    const task = taskStore.get(taskId);
+    if (!task) return;
+    activeTaskId = task.id;
+    agentPanel.classList.add('subagent-view');
+    if (markSeen) task.unseen = false;
+    subagentMenu.hidden = true;
+    sessionTrigger.setAttribute('aria-expanded', 'false');
+    sessionTitle.textContent = 'Edit dotwise introduction';
+    conversation.replaceChildren();
+
+    const heading = document.createElement('div');
+    heading.className = 'subagent-detail-heading';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.setAttribute('aria-label', 'Back to main session');
+    back.innerHTML = '<img src="assets/figma/chevron-down.svg" alt="">';
+    back.addEventListener('click', showMainSession);
+    const title = document.createElement('span');
+    title.textContent = task.title;
+    heading.append(back, title);
+    conversation.append(heading);
+
+    messageStore.filter((record) => (
+      record.subagentTaskId === task.id
+      || (record.role === 'user' && record.text === task.prompt)
+    )).slice(-8).forEach((record) => {
+      if (record.text === copy.summaryEdit) return;
+      const isResearchResult = record.title === 'Competitor Search Results'
+        || record.text.startsWith('Search query:');
+      const taskRecord = {
+        ...record,
+        // A task detail is already inside the subagent. It must never render
+        // the session-entry link that belongs to the main session.
+        subagentTaskId: null,
+        intent: isResearchResult && record.mode === 'edit'
+          ? (record.intent || switchToAskIntent())
+          : null,
+      };
+      conversation.append(renderMainRecord(taskRecord));
     });
-    selectionTaskId = taskId;
-
-    window.setTimeout(() => {
-      if (runId !== selectionRun) return;
-      updateSubagentTask(taskId, { state: 'working', detail: 'Writing and checking the edit' });
-    }, 700);
-
-    window.setTimeout(() => {
-      if (runId !== selectionRun) return;
-      cancelSelectionStream?.();
-      cancelSelectionStream = null;
-      generatedPreview.textContent = completionText;
-      generatedPreview.classList.remove('is-working');
-      selectionMarker?.classList.remove('is-working');
-      selectionReviewCopy.textContent = "I've finished updating the content.";
-      selectionReview.hidden = false;
-      positionSelectionReview();
-      setSubagentDone(taskTitle, 'Waiting for your confirmation', generatedPreview, taskId);
-    }, 2200);
+    contextBar.querySelector('.selection-context')?.remove();
+    if (task.context) pushSelectionContext(task.context);
+    renderTasks();
   }
 
-  function clearSelectionReview() {
-    cancelSelectionStream?.();
-    cancelSelectionStream = null;
-    window.cancelAnimationFrame(selectionReviewPositionFrame);
-    selectionReview.hidden = true;
-    selectionReview.classList.remove('is-anchor-outside');
-    storedRange = null;
-    selectionAnchor = null;
-    selectionRequest = '';
-    if (selectionTaskId) {
-      const task = subagentTasks.get(selectionTaskId);
-      if (task) {
-        clearDocumentTaskState(task);
-        task.inlineAnchor = null;
-        task.statusElement = null;
+  function showMainSession() {
+    activeTaskId = null;
+    agentPanel.classList.remove('subagent-view');
+    contextBar.querySelector('[data-task-context]')?.remove();
+    conversation.replaceChildren();
+    const mainRecords = messageStore.filter((record) => {
+      if (record.role === 'user' && record.subagentTaskId) return false;
+      if (record.role === 'assistant' && record.subagentTaskId) {
+        const task = taskStore.get(record.subagentTaskId);
+        // The response that opened the task remains as the clickable entry
+        // component; all subsequent subagent responses belong only in its
+        // session view.
+        return task?.entryMessageId === record.id;
       }
-      selectionTaskId = null;
+      return true;
+    }).slice(-8);
+    if (!mainRecords.length) {
+      conversation.append(emptySuggestions);
+      emptySuggestions.hidden = false;
+    } else {
+      emptySuggestions.hidden = true;
+      mainRecords.forEach((record) => {
+        if (record.text === copy.summaryEdit) return;
+        conversation.append(renderMainRecord(record));
+      });
     }
+    sessionTitle.textContent = messageStore.length ? 'Edit dotwise introduction' : 'New Chat';
+    renderTasks();
   }
 
-  function acceptSelectionEdit() {
-    if (!generatedPreview) return;
-    generatedPreview.classList.add('accepted');
-    generatedPreview.classList.remove('t-stream');
-    generatedPreview.removeAttribute('contenteditable');
-    unwrapMarker();
-    generatedPreview = null;
-    clearSelectionReview();
-    showToast('AI edit added to the document');
-  }
-
-  function revertSelectionEdit() {
-    selectionRun += 1;
-    generatedPreview?.remove();
-    generatedPreview = null;
-    unwrapMarker();
-    clearSelectionReview();
-    showToast('AI edit reverted');
-  }
-
-  function chooseSuggestion(text) {
-    const normalized = text.toLowerCase().replace(/[‘’]/g, "'").trimEnd();
-    if (/how'?s the$/.test(normalized)) return ' weather today?';
-    if (/\bidea$/.test(normalized)) return ' rarely arrives complete; follow the signal until it finds a useful direction.';
-    if (/\bnote$/.test(normalized)) return ' can turn a fragment into a direction.';
-    if (/\bquestion$/.test(normalized)) return ' can become a map when you keep enough context to return to it.';
-    const words = normalized.match(/[\p{L}\p{N}']+/gu) || [];
-    return words.length >= 2 ? ' — then let the next connection give it direction.' : '';
-  }
-
-  function removeTabSuggestion() {
-    window.clearTimeout(tabSuggestionTimer);
-    tabSuggestionTimer = null;
-    activeTabSuggestion?.remove();
-    activeTabSuggestion = null;
-  }
-
-  function currentEditableCaret() {
+  function pushSelectionContext(text) {
+    selectionText = text.trim();
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
+    if (selection && !selection.isCollapsed && selection.rangeCount) {
+      selectionRange = selection.getRangeAt(0).cloneRange();
+    } else {
+      const block = contextBlockAtCaret(selection);
+      if (block && block.textContent.trim() === selectionText) {
+        selectionRange = document.createRange();
+        selectionRange.selectNodeContents(block);
+      } else {
+        selectionRange = null;
+      }
+    }
+    contextBar.querySelector('.selection-context')?.remove();
+    if (!selectionText || panelCollapsed) return;
+    const chip = document.createElement('div');
+    chip.className = 'selection-context';
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('aria-expanded', 'false');
+    chip.innerHTML = '<img src="assets/figma/agent-file-text.svg" alt="" /><span class="selection-context-preview"></span><span class="selection-context-full"></span>';
+    chip.querySelector('.selection-context-preview').textContent = selectionText.length > 62 ? `“${selectionText.slice(0, 62)}…”` : `“${selectionText}”`;
+    chip.querySelector('.selection-context-full').textContent = `“${selectionText}”`;
+    chip.addEventListener('click', () => {
+      const expanded = chip.getAttribute('aria-expanded') === 'true';
+      chip.setAttribute('aria-expanded', String(!expanded));
+    });
+    contextBar.append(chip);
+  }
+
+  function selectionInsideDocument() {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return '';
     const range = selection.getRangeAt(0);
-    const container = range.startContainer.nodeType === Node.ELEMENT_NODE
-      ? range.startContainer
-      : range.startContainer.parentElement;
-    if (!container || !documentPage.contains(container) || container.closest?.('[contenteditable="false"]')) return null;
-    const block = container.closest?.('p, blockquote, li, h1, h2, figcaption');
-    if (!block) return null;
-
-    const before = document.createRange();
-    before.selectNodeContents(block);
-    before.setEnd(range.startContainer, range.startOffset);
-    const after = document.createRange();
-    after.selectNodeContents(block);
-    after.setStart(range.startContainer, range.startOffset);
-    if (after.toString().trim()) return null;
-    return { range: range.cloneRange(), text: before.toString().replace(/[\n\r]+/g, ' ') };
+    if (!documentPage.contains(range.commonAncestorContainer)) return '';
+    if (!selection.isCollapsed) return selection.toString();
+    return contextBlockAtCaret(selection)?.textContent.trim() || '';
   }
 
-  function showTabSuggestion() {
-    removeTabSuggestion();
-    const caret = currentEditableCaret();
-    if (!caret) return;
-    const completion = chooseSuggestion(caret.text);
-    if (!completion) return;
+  function contextBlockAtCaret(selection = window.getSelection()) {
+    if (!selection || !selection.isCollapsed || !selection.rangeCount) return null;
+    const node = selection.anchorNode;
+    if (!node || !documentPage.contains(node)) return null;
+    const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+    const block = element?.closest?.('p, h1, h2, li, blockquote');
+    return block && documentPage.contains(block) && block.textContent.trim() ? block : null;
+  }
 
-    const suggestion = document.createElement('span');
-    suggestion.className = 'ai-tab-suggestion';
-    suggestion.contentEditable = 'false';
-    suggestion.dataset.completion = completion;
-    const copy = document.createElement('span');
-    copy.className = 'ai-tab-copy';
-    copy.textContent = completion;
-    const hint = document.createElement('kbd');
-    hint.textContent = 'Tab';
-    suggestion.append(copy, hint);
-    caret.range.insertNode(suggestion);
-    activeTabSuggestion = suggestion;
-
+  function removeAtInvocation() {
     const selection = window.getSelection();
-    const restored = document.createRange();
-    restored.setStartBefore(suggestion);
-    restored.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(restored);
-  }
-
-  function scheduleTabSuggestion() {
-    window.clearTimeout(tabSuggestionTimer);
-    tabSuggestionTimer = window.setTimeout(showTabSuggestion, 180);
-  }
-
-  function acceptTabSuggestion() {
-    if (!activeTabSuggestion) return false;
-    const textNode = document.createTextNode(activeTabSuggestion.dataset.completion || '');
-    activeTabSuggestion.replaceWith(textNode);
-    activeTabSuggestion = null;
+    const node = selection?.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE || !node.textContent.includes('@@')) return false;
+    const index = node.textContent.lastIndexOf('@@');
+    node.textContent = `${node.textContent.slice(0, index)}${node.textContent.slice(index + 2)}`;
     const range = document.createRange();
-    range.setStartAfter(textNode);
+    range.setStart(node, index);
     range.collapse(true);
-    const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
-    showToast('AI completion accepted');
     return true;
   }
 
-  documentSurface.addEventListener('pointerdown', (event) => {
-    lastDocumentPoint = { x: event.clientX, y: event.clientY };
-    hideAgentShortcutHint();
-    if (event.target === documentSurface) {
-      documentSurface.focus({ preventScroll: true });
-    }
-  });
-
-  document.addEventListener('pointerdown', (event) => {
-    if (event.target.closest?.('.ai-working-block')) return;
-    subagentTasks.forEach((task) => {
-      const block = task.aiBlock;
-      if (block?.container?.isConnected && block.container.classList.contains('is-expanded')) {
-        animateAiWorkingBlockResize(block, false);
-      }
-    });
-  });
-
-  documentSurface.addEventListener('click', (event) => {
-    const selection = window.getSelection();
-    const isCollapsed = !selection || selection.isCollapsed;
-
-    if (event.target === documentSurface && isCollapsed) {
-      documentSurface.focus({ preventScroll: true });
-    }
-
-    if (documentPage.contains(event.target) && isCollapsed && !selectionPrompt.hidden && storedRange) {
-      selectionPrompt.hidden = true;
-      unwrapMarker();
-      storedRange = null;
-      selectionAnchor = null;
-    }
-
-    if (documentPage.contains(event.target) && isCollapsed) {
-      window.requestAnimationFrame(updateAgentShortcutHint);
-    }
-  });
-
-  function emptyEditableLine(selection) {
-    if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
-    const range = selection.getRangeAt(0);
-    const container = range.startContainer.nodeType === Node.ELEMENT_NODE
-      ? range.startContainer
-      : range.startContainer.parentElement;
-    if (!container || !documentPage.contains(container) || container.closest?.('[contenteditable="false"]')) return null;
-
-    let block = container.closest?.('p, blockquote, li, h1, h2, div:not([class])');
-    if (!block && container === documentPage) {
-      const beforeCaret = container.childNodes[Math.max(0, range.startOffset - 1)];
-      const afterCaret = container.childNodes[range.startOffset];
-      block = [beforeCaret, afterCaret]
-        .map((node) => node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)
-        .find((node) => node?.matches?.('p, blockquote, li, h1, h2, div:not([class])')) || null;
-    }
-    if (!block || block.textContent.replace(/\u200b/g, '').trim()) return null;
-    if (block.querySelector('img, button, iframe, figure, ul, ol, hr')) return null;
-    return { range, block };
-  }
-
-  function rememberCaretPoint({ range, block }) {
-    const rect = range.getClientRects()[0] || block.getBoundingClientRect();
-    if (!rect) return;
-    lastDocumentPoint = {
-      x: rect.left || block.getBoundingClientRect().left,
-      y: rect.bottom || block.getBoundingClientRect().bottom,
-    };
-  }
-
-  function consumeAtAgentCommand(selection = window.getSelection()) {
-    if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
-    const range = selection.getRangeAt(0);
-    let textNode = range.startContainer;
-    let offset = range.startOffset;
-
-    if (textNode.nodeType === Node.ELEMENT_NODE) {
-      const candidate = textNode.childNodes[Math.max(0, offset - 1)];
-      if (!candidate || candidate.nodeType !== Node.TEXT_NODE) return null;
-      textNode = candidate;
-      offset = candidate.data.length;
-    }
-    if (textNode.nodeType !== Node.TEXT_NODE || !textNode.parentElement) return null;
-    const parent = textNode.parentElement;
-    if (!documentPage.contains(parent) || parent.closest('[contenteditable="false"]')) return null;
-
-    const textBeforeCaret = textNode.data.slice(0, offset);
-    if (!textBeforeCaret.endsWith('@@')) return null;
-    const beforeCommand = textBeforeCaret.slice(0, -2);
-    if (beforeCommand && !/\s$/.test(beforeCommand)) return null;
-
-    const block = parent.closest('p, blockquote, li, h1, h2, div:not([class])');
-    if (!block || !documentPage.contains(block)) return null;
-    textNode.deleteData(offset - 2, 2);
-    const caret = document.createRange();
-    caret.setStart(textNode, offset - 2);
-    caret.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(caret);
-    return { range: caret, block };
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Shift' && (event.target === documentPage || documentPage.contains(event.target))) {
-      documentSelectionKeyboardActive = true;
-    }
-
-    if (event.key === 'Escape') {
-      closePromptIntentMenus();
-      hideInlineSubagentTooltip();
-      if (!mainPrompt.hidden) closeMainPrompt();
-      if (!selectionPrompt.hidden) {
-        selectionPrompt.hidden = true;
-        unwrapMarker();
-        storedRange = null;
-        selectionAnchor = null;
-      }
-      if (!subagentMenu.hidden) {
-        subagentMenu.hidden = true;
-        subagentEntry.setAttribute('aria-expanded', 'false');
-      } else if (!subagentPopover.hidden) {
-        closeSubagentWorkspace();
-      }
-      return;
-    }
-
-  });
-
-  mainPrompt.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const prompt = mainPromptInput.value.trim();
-    if (!prompt) {
-      mainPromptInput.focus();
-      return;
-    }
-    submitMainAgentPrompt(prompt, mainPromptIntent.dataset.intent || classifyAgentIntent(prompt));
-  });
-
-  mainPromptInput.addEventListener('input', syncMainPromptState);
-  bindPromptIntentMenu(mainPromptInput, mainPromptIntent, 'main');
-  bindPromptIntentMenu(selectionPromptInput, selectionPromptIntent, 'selection');
-  document.addEventListener('pointerdown', (event) => {
-    if (!event.target.closest?.('.prompt-intent-control')) closePromptIntentMenus();
-  });
-  selectionPromptInput.addEventListener('input', () => {
-    syncPromptIntent(selectionPromptInput, selectionPromptIntent, selectionPromptIntentOverride);
-  });
-
-  [mainPromptInput, selectionPromptInput].forEach((input) => {
-    input.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' || !event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      input.form?.requestSubmit();
-    });
-  });
-
-  selectionPrompt.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const request = selectionPromptInput.value.trim();
-    if (!request) {
-      selectionPromptInput.focus();
-      return;
-    }
-    if ((selectionPromptIntent.dataset.intent || classifyAgentIntent(request)) === 'search') routeSelectionSearchToAgentSession(request);
-    else beginSelectionEdit(request);
-  });
-
-  selectionPrompt.addEventListener('pointerdown', () => {
-    selectionPromptEngaged = true;
-    window.setTimeout(() => { selectionPromptEngaged = false; }, 180);
-  });
-
-  confirmSelection.addEventListener('click', acceptSelectionEdit);
-  revertSelection.addEventListener('click', revertSelectionEdit);
-  inlineSubagentTooltip.addEventListener('mouseenter', () => window.clearTimeout(tooltipHideTimer));
-  inlineSubagentTooltip.addEventListener('mouseleave', scheduleInlineSubagentTooltipHide);
-  inlineSubagentResolve.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (tooltipTaskId) resolveInlineSubagent(tooltipTaskId);
-  });
-  documentSurface.addEventListener('scroll', hideInlineSubagentTooltip, { passive: true });
-
-  document.addEventListener('selectionchange', () => {
-    if (documentSelectionPointerActive || documentSelectionKeyboardActive) return;
-    scheduleSelectionDetection();
-    window.requestAnimationFrame(updateAgentShortcutHint);
-  });
-
-  document.addEventListener('keyup', (event) => {
-    if (event.key !== 'Shift' || !documentSelectionKeyboardActive) return;
-    documentSelectionKeyboardActive = false;
-    scheduleSelectionDetection(0);
-  });
-
-  sendAllReview.addEventListener('click', sendReviewSuggestionsToChat);
-  closeReviewSuggestion.addEventListener('click', () => {
-    hideReviewSuggestion();
-    reviewStatus.textContent = `${reviewRemaining} review suggestions are waiting.`;
-  });
-
-  documentPage.addEventListener('pointerdown', (event) => {
-    if (event.isPrimary) documentSelectionPointerActive = true;
-    removeTabSuggestion();
-  });
-
-  const finishDocumentSelection = () => {
-    if (!documentSelectionPointerActive) return;
-    documentSelectionPointerActive = false;
-    scheduleSelectionDetection(0);
-    window.requestAnimationFrame(updateAgentShortcutHint);
-  };
-
-  document.addEventListener('pointerup', finishDocumentSelection, true);
-  document.addEventListener('pointercancel', finishDocumentSelection, true);
-
-  documentPage.addEventListener('beforeinput', () => {
-    hideAgentShortcutHint();
-    removeTabSuggestion();
-    if (!selectionPrompt.hidden) {
-      selectionPrompt.hidden = true;
-      unwrapMarker();
-      storedRange = null;
-      selectionAnchor = null;
-    }
-  });
-
-  documentPage.addEventListener('input', () => {
-    hideAgentShortcutHint();
-    dismissGuide();
-    const atInvocation = consumeAtAgentCommand();
-    if (atInvocation && mainPrompt.hidden && selectionPrompt.hidden && selectionReview.hidden) {
-      removeTabSuggestion();
-      rememberCaretPoint(atInvocation);
-      openMainPrompt(atInvocation.block, atInvocation.range);
-      return;
-    }
-    scheduleTabSuggestion();
-  });
-
-  documentPage.addEventListener('keydown', (event) => {
-    if (event.key === 'Tab' && activeTabSuggestion) {
-      event.preventDefault();
-      acceptTabSuggestion();
-      return;
-    }
-    if (event.key !== 'Shift' && event.key !== 'Control' && event.key !== 'Alt' && event.key !== 'Meta') {
-      if (event.key !== '@') hideAgentShortcutHint();
-      removeTabSuggestion();
-    }
-  });
-
-  openAgentPanelButton.addEventListener('click', () => {
-    setAgentPanelCollapsed(false);
-    dismissGuide();
-  });
-
-  collapseAgentPanelButton.addEventListener('click', () => {
-    setAgentPanelCollapsed(true);
-    dismissGuide();
-  });
-
-  subagentEntry.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const willOpen = subagentMenu.hidden;
-    if (willOpen) {
-      renderSubagentMenu();
-      subagentMenu.hidden = false;
-      subagentEntry.setAttribute('aria-expanded', 'true');
-      positionSubagentMenu();
-    } else {
-      subagentMenu.hidden = true;
-      subagentEntry.setAttribute('aria-expanded', 'false');
-    }
-    dismissGuide();
-  });
-
-  window.addEventListener('resize', positionSubagentMenu);
-  window.addEventListener('resize', positionInlineSubagentMarginStatuses);
-  documentPage.addEventListener('input', () => window.requestAnimationFrame(positionInlineSubagentMarginStatuses));
-  const inlineSubagentStatusObserver = new ResizeObserver(() => {
-    window.requestAnimationFrame(positionInlineSubagentMarginStatuses);
-  });
-  inlineSubagentStatusObserver.observe(documentPage);
-  window.addEventListener('resize', scheduleSelectionReviewPosition);
-  window.addEventListener('resize', updateAgentShortcutHint);
-  documentSurface.addEventListener('scroll', scheduleSelectionReviewPosition, { passive: true });
-  documentSurface.addEventListener('scroll', updateAgentShortcutHint, { passive: true });
-
-  mainAgentTab.addEventListener('click', () => {
-    closeSubagentWorkspace();
-    mainAgentTab.focus({ preventScroll: true });
-  });
-
-  subagentBack.addEventListener('click', () => {
-    closeSubagentWorkspace();
-    mainAgentTab.focus({ preventScroll: true });
-  });
-  closeSubagentDetail?.addEventListener('click', closeSubagentWorkspace);
-
-  document.addEventListener('pointerdown', (event) => {
-    if (!subagentMenu.hidden && !subagentMenu.contains(event.target) && !subagentEntry.contains(event.target)) {
-      subagentMenu.hidden = true;
-      subagentEntry.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  composerQuoteChip.addEventListener('click', () => revealAgentQuote());
-
   chatComposer.addEventListener('submit', (event) => {
     event.preventDefault();
-    showToast('Demo composer is ready');
-  });
-
-  document.querySelectorAll('.workspace-tabs button').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.workspace-tabs button').forEach((item) => item.classList.remove('active'));
-      button.classList.add('active');
-    });
-  });
-
-  autoReviewTimer = window.setTimeout(showAutomaticReviewSuggestion, 10000);
-  renderSubagentLists();
-  window.setInterval(() => {
-    document.querySelectorAll('[data-task-time]').forEach((node) => {
-      const task = subagentTasks.get(node.dataset.taskTime);
-      if (task) node.textContent = elapsedLabel(task);
-    });
-    document.querySelectorAll('[data-menu-task-time]').forEach((node) => {
-      const task = subagentTasks.get(node.dataset.menuTaskTime);
-      if (task) node.textContent = task.state === 'done' ? completedAgoLabel(task) : elapsedLabel(task);
-    });
-    const detailTask = subagentTasks.get(activeSubagentDetailId);
-    if (detailTask) {
-      const phase = detailTask.state === 'done' ? 'worked' : detailTask.state === 'thinking' ? 'thinking' : 'working';
-      subagentRuntime.innerHTML = `${phase} for ${taskDurationLabel(detailTask)} <span aria-hidden="true">›</span>`;
+    const prompt = composerInput.value.trim();
+    if (!prompt) return;
+    composerInput.value = '';
+    if (activeTaskId) {
+      submitSubagentPrompt(prompt);
+    } else {
+      submitPrompt(prompt);
     }
+  });
+
+  modeTrigger.addEventListener('click', () => {
+    const open = modeMenu.hidden;
+    modeMenu.hidden = !open;
+    modeTrigger.setAttribute('aria-expanded', String(open));
+  });
+  modeMenu.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-mode]');
+    if (button) setMode(button.dataset.mode);
+  });
+
+  collapseAgentPanel.addEventListener('click', () => setPanelCollapsed(true));
+  documentPage.addEventListener('input', () => {
+    if (removeAtInvocation()) {
+      setPanelCollapsed(false);
+      showToast('AI panel opened');
+    }
+  });
+  documentPage.addEventListener('keyup', () => pushSelectionContext(selectionInsideDocument()));
+  documentPage.addEventListener('mouseup', () => window.setTimeout(() => pushSelectionContext(selectionInsideDocument()), 0));
+  // Anchors created before a panel re-render keep their data attributes. This
+  // delegated fallback keeps every dotted document reference navigable.
+  documentPage.addEventListener('click', (event) => {
+    const anchor = event.target.closest?.('.agent-anchor[data-message-id]');
+    // Restoring an edit from HTML recreates the anchor markup but not its
+    // per-node listener. Always keep this delegated route available.
+    if (!anchor) return;
+    event.preventDefault();
+    focusAgentMessage(anchor.dataset.messageId, anchor.dataset.taskId || null);
+  });
+  documentPage.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const anchor = event.target.closest?.('.agent-anchor[data-message-id]');
+    if (!anchor) return;
+    event.preventDefault();
+    focusAgentMessage(anchor.dataset.messageId, anchor.dataset.taskId || null);
+  });
+  document.addEventListener('selectionchange', () => {
+    const text = selectionInsideDocument();
+    if (text) pushSelectionContext(text);
+  });
+
+  sessionTrigger.addEventListener('click', () => {
+    const unseen = [...taskStore.values()].reverse().find((task) => task.unseen);
+    if (unseen) {
+      showTask(unseen.id);
+      // The completion indicator is an entry point into the finished session.
+      // Keep the task menu open after navigating so the user can see its status
+      // alongside the other active and completed subagents.
+      subagentMenu.hidden = false;
+      sessionTrigger.setAttribute('aria-expanded', 'true');
+      renderTasks();
+      return;
+    }
+    const open = subagentMenu.hidden;
+    subagentMenu.hidden = !open;
+    sessionTrigger.setAttribute('aria-expanded', String(open));
+    if (open) renderTasks();
+  });
+  sessionTitle.addEventListener('click', showMainSession);
+  newChatButton.addEventListener('click', () => {
+    messageStore.length = 0;
+    selectionText = '';
+    selectionRange = null;
+    contextBar.querySelector('.selection-context')?.remove();
+    showMainSession();
+    composerInput.value = '';
+    composerInput.focus();
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!modeMenu.hidden && !modeMenu.contains(event.target) && !modeTrigger.contains(event.target)) {
+      modeMenu.hidden = true;
+      modeTrigger.setAttribute('aria-expanded', 'false');
+    }
+    if (!subagentMenu.hidden && !subagentMenu.contains(event.target) && !sessionTrigger.contains(event.target)) {
+      subagentMenu.hidden = true;
+      sessionTrigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  window.setInterval(() => {
+    if (!subagentMenu.hidden) renderTasks();
   }, 1000);
+
+  setMode('edit', { silent: true });
+  documentSurface.scrollTop = 0;
 })();
