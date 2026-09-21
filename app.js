@@ -32,6 +32,12 @@
   const subagentPanelTab = document.getElementById('subagentPanelTab');
   const subagentTabLabel = document.getElementById('subagentTabLabel');
   const closeSubagentTab = document.getElementById('closeSubagentTab');
+  const agentNewTab = document.getElementById('agentNewTab');
+  const newSessionTabShell = document.getElementById('newSessionTabShell');
+  const newSessionTab = document.getElementById('newSessionTab');
+  const newSessionTabLabel = document.getElementById('newSessionTabLabel');
+  const closeNewSessionTab = document.getElementById('closeNewSessionTab');
+  const newSessionConversation = document.getElementById('newSessionConversation');
   const reviewSuggestionCard = document.getElementById('reviewSuggestionCard');
   const reviewSuggestionCount = document.getElementById('reviewSuggestionCount');
   const reviewSuggestionCopy = document.getElementById('reviewSuggestionCopy');
@@ -70,7 +76,8 @@
   const subagentMenuEmptyDone = document.getElementById('subagentMenuEmptyDone');
   const subagentPopover = document.getElementById('subagentPopover');
   const agentCount = document.getElementById('agentCount');
-  if (!isInteractionB) document.querySelector('.agent-tabs').append(agentCount);
+  if (isInteractionB) subagentEntry.append(agentCount);
+  else document.querySelector('.agent-tabs').append(agentCount);
   const activeCount = document.getElementById('activeCount');
   const activeTaskList = document.getElementById('activeTaskList');
   const emptyActive = document.getElementById('emptyActive');
@@ -466,6 +473,9 @@
     emptyDone.hidden = done.length > 0;
     agentCount.textContent = String(active.length);
     agentCount.hidden = active.length === 0;
+    subagentEntry.setAttribute('aria-label', isInteractionB && active.length > 0
+      ? `Open subagent menu, ${active.length} active`
+      : 'Open subagent menu');
     renderSubagentMenu();
   }
 
@@ -502,14 +512,20 @@
   function syncAgentViewTabs(view) {
     const showSubagents = view === 'subagent';
     if (isInteractionB) {
-      mainAgentTab.setAttribute('aria-selected', String(!showSubagents));
-      mainAgentTab.tabIndex = showSubagents ? -1 : 0;
-      mainAgentTab.classList.toggle('is-active', !showSubagents);
+      const showMain = view === 'main';
+      const showNewSession = view === 'new';
+      mainAgentTab.setAttribute('aria-selected', String(showMain));
+      mainAgentTab.tabIndex = showMain ? 0 : -1;
+      mainAgentTab.classList.toggle('is-active', showMain);
       subagentPanelTab.setAttribute('aria-selected', String(showSubagents));
       subagentPanelTab.tabIndex = showSubagents ? 0 : -1;
       subagentPanelTab.classList.toggle('is-active', showSubagents);
       subagentTabShell.classList.toggle('is-active', showSubagents);
-      agentConversation.setAttribute('aria-hidden', String(showSubagents));
+      newSessionTab.setAttribute('aria-selected', String(showNewSession));
+      newSessionTab.tabIndex = showNewSession ? 0 : -1;
+      newSessionTabShell.classList.toggle('is-active', showNewSession);
+      agentConversation.setAttribute('aria-hidden', String(!showMain));
+      newSessionConversation.setAttribute('aria-hidden', String(!showNewSession));
       return;
     }
     subagentPanelTab.hidden = true;
@@ -531,6 +547,8 @@
     subagentMenu.hidden = true;
     subagentPopover.hidden = false;
     agentPanel.classList.add('has-subagent-view');
+    agentPanel.classList.remove('has-new-session-view');
+    newSessionConversation.hidden = true;
     if (isInteractionB) {
       const tabTitle = chipLabelFromPrompt(task.sourcePrompt || task.title);
       subagentTabLabel.textContent = tabTitle;
@@ -560,6 +578,8 @@
   function closeSubagentWorkspace({ closeTab = !isInteractionB } = {}) {
     subagentPopover.hidden = true;
     agentPanel.classList.remove('has-subagent-view');
+    agentPanel.classList.remove('has-new-session-view');
+    newSessionConversation.hidden = true;
     syncAgentViewTabs('main');
     subagentMenu.hidden = true;
     subagentEntry.setAttribute('aria-expanded', 'false');
@@ -573,6 +593,18 @@
         subagentPanelTab.removeAttribute('title');
       }
     }
+  }
+
+  function activateNewSession() {
+    if (!isInteractionB) return;
+    setAgentPanelCollapsed(false, { focus: false });
+    newSessionTabShell.hidden = false;
+    subagentPopover.hidden = true;
+    agentPanel.classList.remove('has-subagent-view');
+    agentPanel.classList.add('has-new-session-view');
+    newSessionConversation.hidden = false;
+    syncAgentViewTabs('new');
+    chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
   }
 
   function attachDocumentTaskState(task, target, state, label) {
@@ -898,6 +930,7 @@
   }
 
   function showAutomaticReviewSuggestion() {
+    if (isInteractionB) return;
     if (!reviewSuggestionCard.hidden || !reviewChatBlock.hidden) return;
     const suggestions = reviewDefinitions.filter(({ target, suggestion }) => target.textContent.trim() !== suggestion.trim());
     if (!suggestions.length) return;
@@ -1804,12 +1837,13 @@
     const link = document.createElement('button');
     link.type = 'button';
     link.className = 'subagent-chat-link';
-    link.setAttribute('aria-label', `Open ${task.title} subagent`);
+    const taskLabel = isInteractionB ? chipLabelFromPrompt(task.sourcePrompt || task.title) : 'Dotwise';
+    link.setAttribute('aria-label', `Open ${isInteractionB ? taskLabel : task.title} subagent`);
     const icon = document.createElement('img');
     icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
     icon.alt = '';
     const name = document.createElement('span');
-    name.textContent = 'Dotwise';
+    name.textContent = taskLabel;
     link.append(icon, name);
     link.addEventListener('click', () => openSubagentDetail(task.id));
     const copy = document.createElement('span');
@@ -2501,6 +2535,20 @@
     mainAgentTab.focus({ preventScroll: true });
   });
 
+  agentNewTab.addEventListener('click', activateNewSession);
+  newSessionTab.addEventListener('click', activateNewSession);
+  closeNewSessionTab.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const wasActive = newSessionTab.getAttribute('aria-selected') === 'true';
+    newSessionTabShell.hidden = true;
+    newSessionConversation.replaceChildren();
+    newSessionTabLabel.textContent = 'New chat';
+    if (wasActive) {
+      closeSubagentWorkspace();
+      mainAgentTab.focus({ preventScroll: true });
+    }
+  });
+
   subagentPanelTab.addEventListener('click', () => {
     const taskId = activeSubagentDetailId || selectedSubagentTaskId || latestSubagentTaskId;
     if (taskId) openSubagentDetail(taskId);
@@ -2529,6 +2577,22 @@
 
   chatComposer.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (isInteractionB && newSessionTab.getAttribute('aria-selected') === 'true') {
+      const input = chatComposer.querySelector('textarea');
+      const message = input.value.trim();
+      if (!message) return;
+      const bubble = document.createElement('p');
+      bubble.className = 'user-message';
+      bubble.textContent = message;
+      newSessionConversation.append(bubble);
+      if (newSessionTabLabel.textContent === 'New chat') {
+        newSessionTabLabel.textContent = message.length > 24 ? `${message.slice(0, 24)}…` : message;
+      }
+      input.value = '';
+      newSessionConversation.scrollTop = newSessionConversation.scrollHeight;
+      input.focus({ preventScroll: true });
+      return;
+    }
     showToast('Demo composer is ready');
   });
 
@@ -2539,7 +2603,8 @@
     });
   });
 
-  autoReviewTimer = window.setTimeout(showAutomaticReviewSuggestion, 10000);
+  if (isInteractionB) reviewSuggestionCard.remove();
+  else autoReviewTimer = window.setTimeout(showAutomaticReviewSuggestion, 10000);
   renderSubagentLists();
   window.setInterval(() => {
     document.querySelectorAll('[data-task-time]').forEach((node) => {

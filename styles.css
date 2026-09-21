@@ -1519,6 +1519,13 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
 .agent-panel.has-subagent-view .agent-conversation,
 .agent-panel.has-subagent-view .ai-suggestion-card { display: none; }
 
+html[data-interaction="b"] .agent-panel.has-new-session-view {
+  grid-template-rows: 48px minmax(0, 1fr) 168px;
+}
+
+html[data-interaction="b"] .agent-panel.has-new-session-view .agent-conversation:not(.new-session-conversation),
+html[data-interaction="b"] .agent-panel.has-new-session-view .ai-suggestion-card { display: none; }
+
 .agent-header {
   height: 48px;
   min-width: 0;
@@ -1581,6 +1588,7 @@ html:not([data-interaction="b"]) .agent-tabs:has(.subagent-menu-trigger[aria-exp
 
 html[data-interaction="b"] .toolbar-actions > [aria-label="More document actions"] { order: 1; }
 html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger:hover { background: rgba(0, 0, 0, .04); }
+html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger { position: relative; }
 html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger[aria-expanded="true"] { background: rgba(0, 0, 0, .05); }
 html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger[aria-expanded="true"] .todo-icon { background: transparent; }
 
@@ -1642,6 +1650,13 @@ html[data-interaction="b"] .agent-context-tab[aria-selected="false"] {
 }
 
 .subagent-tab-shell[hidden] { display: none; }
+
+html[data-interaction="b"] .new-session-tab-shell {
+  min-width: 68px;
+  max-width: 100px;
+  flex: 1 1 80px;
+}
+
 .subagent-tab-shell.is-active {
   border-color: var(--border-default);
   background: white;
@@ -1704,6 +1719,26 @@ html[data-interaction="b"] .agent-context-tab[aria-selected="false"] {
 .subagent-tab-close:hover img { opacity: .9; }
 .subagent-tab-close:focus-visible { outline: 2px solid rgba(32, 32, 32, .4); outline-offset: -3px; }
 
+.agent-new-tab { display: none; }
+
+html[data-interaction="b"] .agent-new-tab {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  margin-left: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+html[data-interaction="b"] .agent-new-tab:hover { background: rgba(0, 0, 0, .04); }
+html[data-interaction="b"] .agent-new-tab:focus-visible { outline: 2px solid rgba(32, 32, 32, .4); outline-offset: 1px; }
+.agent-new-tab img { width: 20px; height: 20px; }
+
 .todo-icon {
   width: 28px;
   height: 28px;
@@ -1733,9 +1768,15 @@ html[data-interaction="b"] .agent-context-tab[aria-selected="false"] {
   font-size: 11px;
 }
 
-html[data-interaction="b"] .agent-count {
-  flex: 0 0 auto;
-  margin-inline: 4px;
+html[data-interaction="b"] .subagent-menu-trigger .agent-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .agent-actions { display: flex; align-items: center; gap: 4px; }
@@ -1754,6 +1795,7 @@ html[data-interaction="b"] .agent-count {
 
 .agent-new-action:hover { background: rgba(0, 0, 0, .04); }
 .agent-new-action img { display: block; width: 16px; height: 16px; }
+html[data-interaction="b"] .agent-new-action { display: none; }
 
 .split-action {
   height: 28px;
@@ -1797,6 +1839,8 @@ html[data-interaction="b"] .agent-count {
   margin: 0;
   padding: 0 12px;
 }
+
+html[data-interaction="b"] .subagent-start-message { flex-wrap: wrap; }
 
 .subagent-chat-link {
   min-height: 20px;
