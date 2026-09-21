@@ -28,7 +28,10 @@
   const collapseAgentPanelButton = document.getElementById('collapseAgentPanel');
   const agentConversation = document.getElementById('agentConversation');
   const mainAgentTab = document.getElementById('mainAgentTab');
+  const subagentTabShell = document.getElementById('subagentTabShell');
   const subagentPanelTab = document.getElementById('subagentPanelTab');
+  const subagentTabLabel = document.getElementById('subagentTabLabel');
+  const closeSubagentTab = document.getElementById('closeSubagentTab');
   const reviewSuggestionCard = document.getElementById('reviewSuggestionCard');
   const reviewSuggestionCount = document.getElementById('reviewSuggestionCount');
   const reviewSuggestionCopy = document.getElementById('reviewSuggestionCopy');
@@ -57,6 +60,7 @@
   const inlineSubagentResolve = document.getElementById('inlineSubagentResolve');
 
   const subagentEntry = document.getElementById('subagentEntry');
+  if (!isInteractionB) document.querySelector('.agent-tabs').prepend(subagentEntry);
   const subagentMenu = document.getElementById('subagentMenu');
   const subagentMenuActiveCount = document.getElementById('subagentMenuActiveCount');
   const subagentMenuDoneCount = document.getElementById('subagentMenuDoneCount');
@@ -66,6 +70,7 @@
   const subagentMenuEmptyDone = document.getElementById('subagentMenuEmptyDone');
   const subagentPopover = document.getElementById('subagentPopover');
   const agentCount = document.getElementById('agentCount');
+  if (!isInteractionB) document.querySelector('.agent-tabs').append(agentCount);
   const activeCount = document.getElementById('activeCount');
   const activeTaskList = document.getElementById('activeTaskList');
   const emptyActive = document.getElementById('emptyActive');
@@ -246,6 +251,47 @@
   function titleFromPrompt(prompt) {
     const cleaned = prompt.replace(/\s+/g, ' ').trim();
     return cleaned.length > 34 ? `${cleaned.slice(0, 34)}…` : cleaned;
+  }
+
+  function chipLabelFromPrompt(prompt) {
+    const cleaned = String(prompt || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return 'Ask AI';
+
+    const normalized = cleaned.toLowerCase();
+    const fixedTopics = [
+      [/(?:\b(?:papers?|research papers?|academic papers?|studies|articles?)\b|论文|文献)/i, 'Search for Papers'],
+      [/(?:\b(?:competitors?|competition|competitive)\b|竞品|竞争对手)/i, 'Search for Competitors'],
+      [/(?:\b(?:grammar|proofread)\b|语法|语病|校对)/i, 'Check Grammar'],
+      [/(?:\b(?:diary|journal)\b|日记)/i, 'Write a Diary'],
+      [/(?:\b(?:translate|translation)\b|翻译)/i, 'Translate Text'],
+      [/(?:\b(?:summary|summarize|abstract)\b|摘要|总结)/i, 'Summarize Text'],
+      [/(?:\b(?:rewrite|rephrase|polish)\b|润色|改写)/i, 'Rewrite Text'],
+    ];
+    const fixedMatch = fixedTopics.find(([pattern]) => pattern.test(normalized));
+    if (fixedMatch) return fixedMatch[1];
+
+    if (/[^\u0000-\u00ff]/.test(cleaned)) {
+      return cleaned.length > 12 ? `${cleaned.slice(0, 12)}…` : cleaned;
+    }
+
+    let topic = cleaned
+      .replace(/^(?:can|could|would|will)\s+you\s+/i, '')
+      .replace(/^(?:please\s+)?(?:help\s+me\s+)?/i, '')
+      .replace(/^(?:find|search(?:\s+for)?|look\s+up|research|browse\s+for|tell\s+me\s+about)\s+/i, '')
+      .replace(/^(?:some|any|the|a|an)\s+/i, '')
+      .replace(/[?.!,;:]+$/g, '')
+      .trim();
+    if (!topic) topic = cleaned;
+
+    const words = topic.split(/\s+/).slice(0, 4);
+    const titledTopic = words.map((word) => (
+      /^(?:a|an|and|for|in|of|on|the|to)$/i.test(word)
+        ? word.toLowerCase()
+        : `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`
+    )).join(' ');
+    const isSearch = /\b(search|find|look up|research|browse)\b/i.test(cleaned);
+    const label = isSearch ? `Search for ${titledTopic}` : titledTopic;
+    return label.length > 28 ? `${label.slice(0, 27).trimEnd()}…` : label;
   }
 
   const subagentAccents = ['violet', 'blue', 'orange', 'mint', 'pink'];
@@ -429,7 +475,7 @@
     const identity = document.createElement('div');
     identity.className = 'subagent-detail-identity';
     const title = document.createElement('strong');
-    title.textContent = task.title;
+    title.textContent = isInteractionB ? chipLabelFromPrompt(task.sourcePrompt || task.title) : task.title;
     identity.append(title);
     subagentDetailIdentity.append(identity);
     const phase = task.state === 'done' ? 'worked' : task.state === 'thinking' ? 'thinking' : 'working';
@@ -455,6 +501,17 @@
 
   function syncAgentViewTabs(view) {
     const showSubagents = view === 'subagent';
+    if (isInteractionB) {
+      mainAgentTab.setAttribute('aria-selected', String(!showSubagents));
+      mainAgentTab.tabIndex = showSubagents ? -1 : 0;
+      mainAgentTab.classList.toggle('is-active', !showSubagents);
+      subagentPanelTab.setAttribute('aria-selected', String(showSubagents));
+      subagentPanelTab.tabIndex = showSubagents ? 0 : -1;
+      subagentPanelTab.classList.toggle('is-active', showSubagents);
+      subagentTabShell.classList.toggle('is-active', showSubagents);
+      agentConversation.setAttribute('aria-hidden', String(showSubagents));
+      return;
+    }
     subagentPanelTab.hidden = true;
     mainAgentTab.setAttribute('aria-selected', 'true');
     mainAgentTab.tabIndex = 0;
@@ -474,6 +531,12 @@
     subagentMenu.hidden = true;
     subagentPopover.hidden = false;
     agentPanel.classList.add('has-subagent-view');
+    if (isInteractionB) {
+      const tabTitle = chipLabelFromPrompt(task.sourcePrompt || task.title);
+      subagentTabLabel.textContent = tabTitle;
+      subagentPanelTab.title = tabTitle;
+      subagentTabShell.hidden = false;
+    }
     syncAgentViewTabs('subagent');
     subagentListView.hidden = true;
     subagentDetailView.hidden = false;
@@ -494,14 +557,22 @@
     openSubagentDetail(taskId || latestSubagentTaskId);
   }
 
-  function closeSubagentWorkspace() {
+  function closeSubagentWorkspace({ closeTab = !isInteractionB } = {}) {
     subagentPopover.hidden = true;
     agentPanel.classList.remove('has-subagent-view');
     syncAgentViewTabs('main');
     subagentMenu.hidden = true;
     subagentEntry.setAttribute('aria-expanded', 'false');
-    activeSubagentDetailId = null;
-    selectedSubagentTaskId = null;
+    if (closeTab) {
+      activeSubagentDetailId = null;
+      selectedSubagentTaskId = null;
+      if (isInteractionB) {
+        subagentTabShell.hidden = true;
+        subagentTabShell.classList.remove('is-active');
+        subagentTabLabel.textContent = 'Subagent';
+        subagentPanelTab.removeAttribute('title');
+      }
+    }
   }
 
   function attachDocumentTaskState(task, target, state, label) {
@@ -1271,7 +1342,8 @@
     });
     if (isBlockResult) {
       insertionTarget.taskId = taskId;
-      if (!isInteractionB) insertionTarget.anchorButton.textContent = sourcePrompt || customTitle || definition.title;
+      if (isInteractionB) updateAiChipLabel(insertionTarget.anchorButton, sourcePrompt || customTitle || definition.title);
+      else insertionTarget.anchorButton.textContent = sourcePrompt || customTitle || definition.title;
       const task = subagentTasks.get(taskId);
       task.inlineAnchor = insertionTarget.anchorButton;
       insertionTarget.anchorButton.addEventListener('mouseenter', () => showInlineSubagentTooltip(taskId));
@@ -1474,20 +1546,26 @@
     });
   }
 
-  function populateAiChip(chip) {
+  function updateAiChipLabel(chip, prompt) {
+    const label = chip?.querySelector('.ai-chip-label');
+    if (label) label.textContent = chipLabelFromPrompt(prompt);
+  }
+
+  function populateAiChip(chip, prompt = '') {
     chip.classList.add('ai-chip');
     const icon = document.createElement('img');
     icon.src = 'assets/figma/ai-chip-icon.svg?v=20260918-b4';
     icon.alt = '';
     const label = document.createElement('span');
-    label.textContent = 'Dot';
+    label.className = 'ai-chip-label';
+    label.textContent = chipLabelFromPrompt(prompt);
     chip.replaceChildren(icon, label);
   }
 
-  function createAiChip() {
+  function createAiChip(prompt = '') {
     const chip = document.createElement('span');
     chip.contentEditable = 'false';
-    populateAiChip(chip);
+    populateAiChip(chip, prompt);
     return chip;
   }
 
@@ -1536,7 +1614,7 @@
     syncMainPromptState();
     let anchor;
     if (isInteractionB) {
-      anchor = createAiChip();
+      anchor = createAiChip(prompt);
       if (host && replacedBlock) {
         replacedBlock.replaceChildren(anchor);
         host.replaceWith(replacedBlock);
@@ -1797,7 +1875,7 @@
     };
     let chip = null;
     if (isInteractionB) {
-      chip = createAiChip();
+      chip = createAiChip(prompt);
       if (selectionMarker?.matches('span')) selectionMarker.insertAdjacentElement('afterend', chip);
       else quote.target.append(chip);
     }
@@ -2420,6 +2498,17 @@
 
   mainAgentTab.addEventListener('click', () => {
     closeSubagentWorkspace();
+    mainAgentTab.focus({ preventScroll: true });
+  });
+
+  subagentPanelTab.addEventListener('click', () => {
+    const taskId = activeSubagentDetailId || selectedSubagentTaskId || latestSubagentTaskId;
+    if (taskId) openSubagentDetail(taskId);
+  });
+
+  closeSubagentTab.addEventListener('click', (event) => {
+    event.stopPropagation();
+    closeSubagentWorkspace({ closeTab: true });
     mainAgentTab.focus({ preventScroll: true });
   });
 

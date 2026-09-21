@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#eef7f7" />
+  <title>Dotwise — Interaction C</title>
+  <link rel="icon" href="assets/figma/agent-document.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="interaction-c.css?v=20260919-c1" />
+</head>
+<body>
+  <div class="sandbox-shell">
+    <aside class="sandbox-navigation" aria-label="Document AI interaction versions">
+      <div class="sandbox-brand"><img src="assets/figma/sandbox-brand.svg" alt="Dotwise" /></div>
+      <nav class="sandbox-version-menu" aria-label="Document AI">
+        <div class="sandbox-menu-heading">Document AI</div>
+        <a class="sandbox-version" href="index.html?interaction=a">Interaction A</a>
+        <a class="sandbox-version" href="index.html?interaction=b">Interaction B</a>
+        <a class="sandbox-version" href="interaction-c.html" aria-current="page">Interaction C</a>
+      </nav>
+    </aside>
+    <div class="sandbox-stage">
+  <main class="app-shell" aria-label="Dotwise document workspace">
+    <div class="ambient-gradient" aria-hidden="true"></div>
+
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <header class="sidebar-titlebar">
+        <div class="traffic-lights" aria-label="Window controls">
+          <span class="traffic-light close"></span>
+          <span class="traffic-light minimize"></span>
+          <span class="traffic-light zoom"></span>
+        </div>
+        <div class="sidebar-tools">
+          <button class="icon-button" type="button" aria-label="Search"><img src="assets/figma/search.svg" alt="" /></button>
+          <button class="icon-button" type="button" aria-label="Collapse sidebar"><img src="assets/figma/panel-right.svg" alt="" /></button>
+        </div>
+      </header>
+
+      <nav class="workspace-tabs" aria-label="Workspace sections">
+        <button type="button">File</button>
+        <button class="active" type="button">Task</button>
+        <button type="button">Inbox</button>
+      </nav>
+
+      <div class="sidebar-scroll">
+        <section class="nav-section">
+          <div class="nav-heading">Pinned</div>
+          <button class="nav-item" type="button"><img src="assets/figma/file.svg" alt="" /><span>Note</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/presentation.svg" alt="" /><span>Canvas</span></button>
+        </section>
+
+        <section class="nav-section">
+          <div class="nav-heading"><span>Task</span><span aria-hidden="true">+</span></div>
+          <button class="nav-item" type="button"><img src="assets/figma/presentation.svg" alt="" /><span>Canvas</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/terminal.svg" alt="" /><span>Terminal</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/folder.svg" alt="" /><span>Group</span></button>
+          <button class="nav-item" type="button"><span class="figma-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span>Figma</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/file.svg" alt="" /><span>hiiiii</span></button>
+          <button class="nav-item active" type="button"><img src="assets/figma/file.svg" alt="" /><span>From Dots to Direction</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/compass.svg" alt="" /><span>Browser</span></button>
+          <button class="nav-item" type="button"><img src="assets/figma/bot.svg" alt="" /><span>Chat</span></button>
+        </section>
+      </div>
+
+      <footer class="workspace-identity">
+        <span class="workspace-avatar" aria-hidden="true"></span>
+        <span>Stella’s workspace</span>
+      </footer>
+    </aside>
+
+    <section class="content-shell" id="contentShell">
+      <section class="document-workspace" aria-label="Document editor">
+        <header class="document-toolbar">
+          <div class="document-name"><img src="assets/figma/file.svg" alt="" />From Dots to Direction</div>
+          <div class="toolbar-actions">
+            <button class="icon-button" type="button" aria-label="Save to file"><img src="assets/figma/workspace-download.svg" alt="" /></button>
+            <button class="icon-button" type="button" aria-label="More document actions"><img src="assets/figma/workspace-more.svg" alt="" /></button>
+          </div>
+        </header>
+
+        <div class="document-scroller" id="documentSurface">
+          <div class="cover" role="img" aria-label="Abstract blue cover image"></div>
+          <article class="document-page" id="documentPage" contenteditable="true" spellcheck="true" role="textbox" aria-label="Editable document" aria-multiline="true">
+            <h1>From Dots to Direction</h1>
+            <p class="metadata">Last updated: August 2026 · Assigned to @DesignTeam · <span class="review-dot"></span> Under review</p>
+            <p class="intro-copy" id="introCopy">Ideas rarely arrive as finished arguments. They show up as fragments: a sentence, an image, a question. A useful note helps you capture the signal, connect it to context.</p>
+            <blockquote>“A useful note does not preserve a thought. It gives the thought somewhere to go.”</blockquote>
+            <hr />
+            <section class="document-section">
+              <h2>1. Capture the dots</h2>
+              <p id="captureLead">The best capture system is deliberately incomplete. Save the fragment before your brain turns it into a polished story; context can come later.</p>
+              <ul>
+                <li>A sentence you do not want to lose</li>
+                <li>A question that keeps returning</li>
+                <li>An image that changes how you see the problem</li>
+              </ul>
+              <div class="gallery" aria-label="Document image gallery">
+                <figure><div class="gallery-image image-one"></div><figcaption>Notice the fragment</figcaption></figure>
+                <figure><div class="gallery-image image-two"></div><figcaption>Give it a handle</figcaption></figure>
+                <figure><div class="gallery-image image-three"></div><figcaption>Find its next edge</figcaption></figure>
+              </div>
+            </section>
+            <section class="document-section">
+              <h2>2. Connect what keeps returning</h2>
+              <p>A pattern of notes is revealing. Revisit the fragments that continue to feel unfinished and look for the questions, tensions, or images they share.</p>
+            </section>
+            <p class="blank-line"><br /></p>
+          </article>
+        </div>
+      </section>
+
+      <aside class="agent-panel" id="agentPanel" aria-label="AI side panel">
+        <header class="agent-header">
+          <button class="session-trigger" id="sessionTrigger" type="button" aria-label="Open subagent menu" aria-expanded="false">
+            <span class="todo-icon"><img src="assets/figma/agent-list-row.svg" alt="" /><img src="assets/figma/agent-list-row.svg" alt="" /></span>
+            <span class="completion-dot" id="completionDot" hidden></span>
+          </button>
+          <button class="session-title" id="sessionTitle" type="button">New Chat</button>
+          <div class="agent-actions">
+            <button class="icon-button" id="newChatButton" type="button" aria-label="New conversation"><img src="assets/figma/agent-message-plus.svg" alt="" /></button>
+            <button class="icon-button" type="button" aria-label="Expand panel"><img src="assets/figma/agent-expand.svg" alt="" /></button>
+            <button class="icon-button" id="collapseAgentPanel" type="button" aria-label="Close agent panel"><img src="assets/figma/agent-panel-left.svg" alt="" /></button>
+          </div>
+        </header>
+
+        <div class="conversation" id="conversation" aria-live="polite">
+          <section class="empty-suggestions" id="emptySuggestions">
+            <div class="suggestions-slot">
+              <strong class="suggestion-item">Suggestions</strong>
+              <button class="suggestion-item" type="button"><img src="assets/figma/suggestions-archive.svg" alt="" />Add a Summary</button>
+              <button class="suggestion-item" type="button"><img src="assets/figma/suggestions-loader-circle.svg" alt="" />Improve Clarity</button>
+              <button class="suggestion-item" type="button"><img src="assets/figma/suggestions-zap.svg" alt="" />Translate Content</button>
+              <button class="suggestion-item" type="button"><img src="assets/figma/suggestions-message-square-text.svg" alt="" />Style this Page</button>
+            </div>
+          </section>
+        </div>
+
+        <form class="composer" id="chatComposer">
+          <div class="context-bar" id="contextBar">
+              <div class="context-chip"><img src="assets/figma/agent-file-base.svg" alt="" /><span>From Dots to Direction</span></div>
+          </div>
+          <textarea id="composerInput" aria-label="Message agent" placeholder="Ask anything"></textarea>
+          <div class="composer-actions">
+            <button class="add-button" type="button" aria-label="Add attachment">+</button>
+            <div class="composer-spacer"></div>
+            <div class="model-select"><img src="assets/figma/agent-claude.svg" alt="" /><span>Claude</span><img src="assets/figma/agent-model-chevron.svg" alt="" /></div>
+            <div class="mode-select">
+              <button class="mode-trigger" id="modeTrigger" type="button" aria-expanded="false"><span id="modeLabel">Edit</span><img src="assets/figma/agent-chevron.svg" alt="" /></button>
+              <div class="mode-menu" id="modeMenu">
+                <button type="button" data-mode="ask">Ask <span class="mode-check"></span></button>
+                <button type="button" data-mode="edit">Edit <span class="mode-check">✓</span></button>
+              </div>
+            </div>
+            <button class="composer-send" id="composerSend" type="submit" aria-label="Send message"><img src="assets/figma/agent-send.svg" alt="" /></button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="subagent-menu" id="subagentMenu" hidden aria-label="Subagent tasks">
+        <div class="task-group-label"><span class="task-status-dot active"></span><span>Active · <strong id="activeTaskCount">0</strong></span></div>
+        <div class="task-list" id="activeTaskList"></div>
+        <div class="task-divider"></div>
+        <div class="task-group-label"><span class="task-status-dot done"></span><span>Done · <strong id="doneTaskCount">0</strong></span></div>
+        <div class="task-list" id="doneTaskList"></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="panel-closed-label" id="panelClosedLabel" hidden>Type <kbd>@@</kbd> on a blank line to open AI</div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+  </div>
+  <script src="interaction-c.js?v=20260919-c1"></script>
+</body>
+</html>

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#eef7f7" />
   <title>Dotwise — Document AI Sandbox</title>
   <link rel="icon" href="assets/figma/agent-document.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=20260918-b5" />
+  <link rel="stylesheet" href="styles.css?v=20260921-b10" />
 </head>
 <body>
   <div class="sandbox-shell">
@@ -16,6 +16,7 @@
         <div class="sandbox-menu-heading">Document AI</div>
         <a class="sandbox-version" data-interaction-link="a" href="?interaction=a">Interaction A</a>
         <a class="sandbox-version" data-interaction-link="b" href="?interaction=b">Interaction B</a>
+        <a class="sandbox-version" href="interaction-c.html">Interaction C</a>
       </nav>
     </aside>
     <div class="sandbox-stage">
@@ -74,6 +75,12 @@
           <div class="toolbar-actions">
             <button class="icon-button workspace-header-action" type="button" aria-label="Save to file"><img src="assets/figma/workspace-download.svg" alt="" /></button>
             <button class="icon-button workspace-header-action" type="button" aria-label="More document actions"><img src="assets/figma/workspace-more.svg" alt="" /></button>
+            <button class="subagent-menu-trigger" id="subagentEntry" type="button" aria-label="Open subagent menu" aria-expanded="false" aria-controls="subagentMenu">
+              <span class="todo-icon" aria-hidden="true">
+                <img src="assets/figma/agent-list-row.svg" alt="" />
+                <img src="assets/figma/agent-list-row.svg" alt="" />
+              </span>
+            </button>
             <button class="workspace-chat-button" id="openAgentPanel" type="button" aria-label="Open agent panel" aria-controls="agentPanel" hidden>
               <img src="assets/figma/workspace-chat.svg" alt="" />
               <span>Chat</span>
@@ -191,15 +198,19 @@
       <aside class="agent-panel" id="agentPanel" aria-label="Agent panel">
         <header class="agent-header">
           <div class="agent-tabs" role="tablist" aria-label="Agent views">
-            <button class="subagent-menu-trigger" id="subagentEntry" type="button" aria-label="Open subagent menu" aria-expanded="false" aria-controls="subagentMenu">
-              <span class="todo-icon" aria-hidden="true">
-                <img src="assets/figma/agent-list-row.svg" alt="" />
-                <img src="assets/figma/agent-list-row.svg" alt="" />
-              </span>
+            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">
+              <span class="agent-tab-label-text">Plan a weekend</span>
+              <img class="agent-tab-close-glyph" src="assets/figma/review-close.svg" alt="" aria-hidden="true" />
             </button>
-            <button class="agent-workspace-tab agent-context-tab is-active" id="mainAgentTab" type="button" role="tab" aria-selected="true" aria-controls="agentConversation">Plan a weekend</button>
-            <button class="agent-workspace-tab subagent-tab-label" id="subagentPanelTab" type="button" role="tab" aria-selected="false" aria-controls="subagentPopover" tabindex="-1" hidden>Subagent</button>
             <span class="agent-count" id="agentCount" hidden>0</span>
+            <div class="subagent-tab-shell" id="subagentTabShell" role="presentation" hidden>
+              <button class="agent-workspace-tab subagent-tab-label" id="subagentPanelTab" type="button" role="tab" aria-selected="false" aria-controls="subagentPopover" tabindex="-1">
+                <span id="subagentTabLabel">Subagent</span>
+              </button>
+              <button class="subagent-tab-close" id="closeSubagentTab" type="button" aria-label="Close subagent tab">
+                <img src="assets/figma/review-close.svg" alt="" />
+              </button>
+            </div>
           </div>
           <div class="agent-actions">
             <button class="agent-new-action" type="button" aria-label="New conversation"><img src="assets/figma/agent-message-plus.svg" alt="" /></button>
@@ -310,7 +321,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="app.js?v=20260918-b10"></script>
+  <script src="app.js?v=20260921-b12"></script>
   <script src="working-logo.bundle.js"></script>
 </body>
 </html>

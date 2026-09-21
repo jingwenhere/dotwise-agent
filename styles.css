@@ -1179,6 +1179,13 @@ html[data-interaction="b"] .ai-chip.inline-subagent-anchor {
 }
 
 html[data-interaction="b"] .ai-chip > img { display: block; width: 16px; height: 16px; flex: 0 0 16px; border-radius: 4px; }
+html[data-interaction="b"] .ai-chip > .ai-chip-label {
+  display: block;
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 html[data-interaction="b"] .ai-chip > .ai-task-status {
   top: 2px;
   left: 2px;
@@ -1557,13 +1564,6 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
   outline-offset: 1px;
 }
 
-.agent-context-tab { max-width: 115px; }
-.agent-context-tab[aria-selected="true"] {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
 .subagent-menu-trigger {
   height: 28px;
   width: 28px;
@@ -1575,15 +1575,51 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
   cursor: pointer;
 }
 
-.agent-tabs:has(.subagent-menu-trigger[aria-expanded="true"]) {
+html:not([data-interaction="b"]) .agent-tabs:has(.subagent-menu-trigger[aria-expanded="true"]) {
   background: rgba(0, 0, 0, .04);
 }
 
+html[data-interaction="b"] .toolbar-actions > [aria-label="More document actions"] { order: 1; }
+html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger:hover { background: rgba(0, 0, 0, .04); }
+html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger[aria-expanded="true"] { background: rgba(0, 0, 0, .05); }
+html[data-interaction="b"] .toolbar-actions > .subagent-menu-trigger[aria-expanded="true"] .todo-icon { background: transparent; }
+
 .agent-context-tab {
-  padding-left: 4px;
+  max-width: 134px;
+  height: 30px;
+  display: flex;
+  flex: 1 1 112px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
   font-weight: 500;
   color: rgba(0, 0, 0, .9);
+  text-align: left;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, font-weight 140ms ease;
 }
+
+html[data-interaction="b"] .agent-context-tab[aria-selected="false"] {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.agent-tab-label-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-tab-close-glyph {
+  width: 12px;
+  height: 12px;
+  display: none;
+  flex: 0 0 12px;
+  opacity: .56;
+}
+
+.agent-context-tab[aria-selected="true"] .agent-tab-close-glyph { display: block; }
 
 .subagent-menu-trigger[aria-expanded="true"] .todo-icon { background: rgba(0, 0, 0, .05); }
 .subagent-menu-trigger:focus-visible { outline: none; }
@@ -1591,7 +1627,82 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
   outline: 2px solid rgba(32, 32, 32, .4);
   outline-offset: 1px;
 }
-.subagent-tab-label { max-width: 92px; font-weight: 500; }
+.subagent-tab-shell {
+  min-width: 76px;
+  max-width: 134px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  flex: 1 1 112px;
+  overflow: hidden;
+  border: .5px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.subagent-tab-shell[hidden] { display: none; }
+.subagent-tab-shell.is-active {
+  border-color: var(--border-default);
+  background: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .04);
+}
+
+.subagent-tab-shell .subagent-tab-label {
+  max-width: none;
+  height: 100%;
+  flex: 1 1 auto;
+  padding: 4px 2px 4px 8px;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 400;
+  text-align: left;
+}
+
+.subagent-tab-shell .subagent-tab-label[aria-selected="true"] {
+  border: 0;
+  color: var(--text-primary);
+  background: transparent;
+  box-shadow: none;
+}
+
+.subagent-tab-label span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subagent-tab-close {
+  width: 0;
+  height: 28px;
+  display: grid;
+  flex: 0 0 0;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  opacity: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: none;
+  transition: width 140ms ease, flex-basis 140ms ease, opacity 140ms ease;
+}
+
+.subagent-tab-shell.is-active .subagent-tab-close {
+  width: 26px;
+  flex-basis: 26px;
+  padding: 7px 8px 7px 5px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.subagent-tab-close img { width: 12px; height: 12px; opacity: .56; }
+.subagent-tab-close:hover img { opacity: .9; }
+.subagent-tab-close:focus-visible { outline: 2px solid rgba(32, 32, 32, .4); outline-offset: -3px; }
 
 .todo-icon {
   width: 28px;
@@ -1620,6 +1731,11 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
   color: white;
   background: #202020;
   font-size: 11px;
+}
+
+html[data-interaction="b"] .agent-count {
+  flex: 0 0 auto;
+  margin-inline: 4px;
 }
 
 .agent-actions { display: flex; align-items: center; gap: 4px; }
@@ -2525,6 +2641,14 @@ html[data-interaction="b"] .ai-working-block.is-expanded .ai-working-block-card 
 .subagent-detail-content h3 { margin: 0 0 17px; font-size: 17px; font-weight: 600; line-height: 20px; }
 .subagent-detail-content p { margin: 0 0 12px; white-space: pre-wrap; }
 .subagent-detail-status { color: var(--text-secondary); }
+
+html[data-interaction="b"] .subagent-detail-view { grid-template-rows: 49px 32px minmax(0, 1fr); }
+html[data-interaction="b"] .subagent-detail-header {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 8px 9px;
+}
+html[data-interaction="b"] .subagent-back { display: none; }
+html[data-interaction="b"] .subagent-detail-identity strong { font-size: 16px; line-height: 22px; }
 
 .interaction-guide {
   position: fixed;
