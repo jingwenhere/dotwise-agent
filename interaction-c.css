@@ -377,7 +377,8 @@ button:focus-visible, textarea:focus-visible, [contenteditable="true"]:focus-vis
   .sandbox-shell { min-height: 100dvh; height: auto; display: flex; flex-direction: column; overflow: visible; }
   .sandbox-navigation { flex: 0 0 auto; border-right: 0; border-bottom: 1px solid rgba(0, 0, 0, .12); }
   .sandbox-brand { height: 40px; flex-basis: 40px; }
-  .sandbox-version-menu { flex-direction: row; align-items: center; gap: 4px; padding-bottom: 6px; }
+  .sandbox-version-menu { min-width: 0; overflow-x: auto; flex-direction: row; align-items: center; gap: 4px; padding-bottom: 6px; }
+  .sandbox-version-menu > * { flex: 0 0 auto; }
   .sandbox-menu-heading { height: 32px; padding-inline: 8px; }
   .sandbox-version { height: 32px; }
   .sandbox-stage { flex: 1 1 auto; min-height: 0; padding: 12px; }
