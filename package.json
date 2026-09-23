@@ -1,5 +1,15 @@
 {
+  "scripts": {
+    "build:canvas-loaders": "node scripts/build-canvas-loaders.mjs"
+  },
   "dependencies": {
-    "cuelume": "^0.2.2"
+    "cuelume": "^0.2.2",
+    "img-fx": "0.5.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "three": "0.179.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
   }
 }

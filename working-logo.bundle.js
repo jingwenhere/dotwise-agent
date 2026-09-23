@@ -237,10 +237,12 @@
   var LOGO_SIZE = 24;
   var LOGO_SPEED = 1.7;
   var canvases = /* @__PURE__ */ new Set();
+  var logoStarts = new WeakMap();
   function prepareCanvas(canvas) {
     if (!(canvas instanceof HTMLCanvasElement) || canvases.has(canvas)) return;
     canvas.width = LOGO_SIZE;
     canvas.height = LOGO_SIZE;
+    if (canvas.dataset.workingLogoStart === "logo") logoStarts.set(canvas, performance.now());
     canvases.add(canvas);
   }
   function discoverCanvases(root = document) {
@@ -275,7 +277,9 @@
         canvases.delete(canvas);
         return;
       }
-      paintCanvas(canvas, time);
+      const start = logoStarts.get(canvas);
+      const localTime = start === void 0 || reducedMotion.matches ? time : 5.35 + (now - start) / 1e3 * LOGO_SPEED;
+      paintCanvas(canvas, localTime);
     });
     window.requestAnimationFrame(render);
   }

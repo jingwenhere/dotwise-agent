@@ -134,6 +134,8 @@
   let activeShortcutBlock = null;
   let tooltipTaskId = null;
   let tooltipHideTimer = null;
+  const canvasChatRuns = new Map();
+  let canvasChatImages = [];
 
   const reviewDefinitions = [
     {
@@ -647,6 +649,138 @@
     newSessionConversation.hidden = false;
     syncAgentViewTabs('new');
     chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
+  }
+
+  function resetCanvasChat() {
+    canvasChatRuns.forEach((timer) => window.clearTimeout(timer));
+    canvasChatRuns.clear();
+    canvasChatImages = [];
+  }
+
+  // Interaction C's Ask flow: user message, 2400ms Working preview, then reply.
+  // Responses remain local prototype copy, just like Interaction C.
+  function canvasChatReply(message, images) {
+    const lower = message.toLowerCase();
+    if (/prompt|generate|create|生成|提示词/.test(lower)) {
+      return 'Try this direction: an impressionist landscape with soft natural light, loose brushwork, muted blue-green tones, and a quiet, spacious composition. Keep the texture painterly and the edges soft.';
+    }
+    if (/similar|recommend|search|相似|推荐/.test(lower)) {
+      const references = 'For a similar direction, explore Monet\'s winter landscapes and Sisley\'s snow scenes. Look for subdued light, delicate blue-grey shadows, and loose, visible brushwork.';
+      return images.length > 1
+        ? `${references}\n\nTo bring in the water-lily reference, add softer green reflections and a more open, abstract composition.`
+        : references;
+    }
+    if (images.length > 1) {
+      return 'The two paintings share soft light and visible brushwork. The water-lily painting feels fluid and open, while the winter landscape uses clearer shapes and quieter, cooler tones.\n\nA combined direction could keep the winter scene\'s structure and borrow the water-lily painting\'s softened edges and reflected colour.';
+    }
+    return images.length
+      ? 'The selected winter landscape has a quiet atmosphere, soft snow tones, and loose brushwork. Darker trees give the composition structure without overpowering the light.\n\nFor a related painting, keep the palette restrained and vary the brushwork and lighting rather than adding more detail.'
+      : 'I can help compare painting styles, discuss colour and composition, or refine a prompt for your next image.';
+  }
+
+  function runCanvasChatReply(article, message, images) {
+    if (canvasChatRuns.has(article)) return;
+    const restoreFocus = article.contains(document.activeElement);
+    article.className = 'message assistant working-message';
+    article.setAttribute('aria-label', 'AI is working');
+    article.textContent = 'Working...';
+    if (restoreFocus) {
+      article.tabIndex = -1;
+      article.focus({ preventScroll: true });
+    }
+    const timer = window.setTimeout(() => {
+      canvasChatRuns.delete(article);
+      if (!article.isConnected) return;
+      const shouldScroll = newSessionConversation.scrollHeight - newSessionConversation.scrollTop - newSessionConversation.clientHeight < 80;
+      article.classList.remove('working-message');
+      article.removeAttribute('aria-label');
+      const text = canvasChatReply(message, images);
+      const copy = document.createElement('div');
+      copy.className = 'message-copy';
+      copy.textContent = text;
+      const actions = document.createElement('div');
+      actions.className = 'message-actions';
+      const feedback = [];
+      [
+        ['agent-refresh.svg', 'Regenerate answer', () => runCanvasChatReply(article, message, images)],
+        ['agent-thumbs-up.svg', 'Good response', (button) => {
+          feedback.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+          showToast('Feedback saved');
+        }],
+        ['agent-thumbs-down.svg', 'Poor response', (button) => {
+          feedback.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+          showToast('Feedback saved');
+        }],
+        ['agent-copy.svg', 'Copy answer', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast('Copied');
+          } catch {
+            showToast('Could not copy. Select the answer to copy it.');
+          }
+        }],
+      ].forEach(([icon, label, handler], index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        const image = document.createElement('img');
+        image.src = `assets/figma/${icon}`;
+        image.alt = '';
+        button.append(image);
+        button.addEventListener('click', () => handler(button));
+        if (index === 1 || index === 2) {
+          button.setAttribute('aria-pressed', 'false');
+          feedback.push(button);
+        }
+        actions.append(button);
+      });
+      article.replaceChildren(copy, actions);
+      if (document.activeElement === article) actions.firstElementChild.focus({ preventScroll: true });
+      article.removeAttribute('tabindex');
+      if (shouldScroll) newSessionConversation.scrollTop = newSessionConversation.scrollHeight;
+    }, 2400);
+    canvasChatRuns.set(article, timer);
+  }
+
+  function sendCanvasChat(message, images = []) {
+    message = message.trim();
+    if (!message) return false;
+    if (images.length) canvasChatImages = images.map(({ src, alt }) => ({ src, alt }));
+    if (canvasChatButton.getAttribute('aria-expanded') !== 'true') canvasChatButton.click();
+    activateNewSession();
+    newSessionConversation.classList.add('canvas-chat-c');
+    newSessionConversation.setAttribute('aria-live', 'polite');
+    const article = document.createElement('article');
+    article.className = 'message user';
+    if (images.length) {
+      const attachments = document.createElement('div');
+      attachments.className = 'canvas-ai-chat-attachments';
+      attachments.setAttribute('aria-label', `${images.length} selected image${images.length === 1 ? '' : 's'}`);
+      images.forEach(({ src, alt }) => {
+        const image = document.createElement('img');
+        Object.assign(image, { src, alt, width: 72, height: 60 });
+        attachments.append(image);
+      });
+      article.append(attachments);
+    }
+    const copy = document.createElement('div');
+    copy.className = 'message-copy';
+    copy.textContent = message;
+    article.append(copy);
+    const response = document.createElement('article');
+    newSessionConversation.append(article, response);
+    if (newSessionTabLabel.textContent === 'New chat') {
+      newSessionTabLabel.textContent = message.length > 24 ? `${message.slice(0, 24)}…` : message;
+      newSessionTabLabel.title = message;
+    }
+    runCanvasChatReply(response, message, [...canvasChatImages]);
+    newSessionConversation.scrollTop = newSessionConversation.scrollHeight;
+    return true;
+  }
+
+  if (['single', 'multi'].includes(document.documentElement.dataset.selectionMode)) {
+    window.CanvasChat = { send: sendCanvasChat };
   }
 
   function attachDocumentTaskState(task, target, state, label) {
@@ -2616,8 +2750,10 @@
     event.stopPropagation();
     const wasActive = newSessionTab.getAttribute('aria-selected') === 'true';
     newSessionTabShell.hidden = true;
+    resetCanvasChat();
     newSessionConversation.replaceChildren();
     newSessionTabLabel.textContent = 'New chat';
+    newSessionTabLabel.removeAttribute('title');
     if (wasActive) {
       closeSubagentWorkspace();
       mainAgentTab.focus({ preventScroll: true });
@@ -2656,6 +2792,12 @@
       const input = chatComposer.querySelector('textarea');
       const message = input.value.trim();
       if (!message) return;
+      if (window.CanvasChat) {
+        window.CanvasChat.send(message);
+        input.value = '';
+        input.focus({ preventScroll: true });
+        return;
+      }
       const bubble = document.createElement('p');
       bubble.className = 'user-message';
       bubble.textContent = message;
@@ -2669,6 +2811,18 @@
       return;
     }
     showToast('Demo composer is ready');
+  });
+
+  chatComposer.addEventListener('keydown', (event) => {
+    if (!window.CanvasChat || newSessionTab.getAttribute('aria-selected') !== 'true') return;
+    if (!event.isComposing && event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      chatComposer.requestSubmit();
+    }
+  });
+
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) resetCanvasChat();
   });
 
   document.querySelectorAll('.workspace-tabs button').forEach((button) => {

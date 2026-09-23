@@ -1,0 +1,39 @@
+/* F/G reuse Canvas E's layout; the library is confined to its loading square. */
+:is([data-sandbox-variant="canvas-f"], [data-sandbox-variant="canvas-g"]) .canvas-board {
+  --selection-blue: #3e63dd;
+  --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
+  isolation: isolate;
+}
+
+.canvas-ai-stage:is([data-loading-effect="composer"], [data-loading-effect="pixels"]) .canvas-ai-loader {
+  overflow: hidden;
+  background: #f8f9f9;
+  box-shadow: none;
+}
+
+.canvas-ai-library-mount,
+.canvas-ai-composer-host,
+.canvas-ai-library-still {
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-ai-library-mount { position: relative; }
+.canvas-ai-library-still {
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: #f8f9f9;
+}
+
+.canvas-ai-composer-host[data-paused="true"] .bui-composer-loader-rect {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-ai-stage:is([data-loading-effect="composer"], [data-loading-effect="pixels"]) .canvas-ai-artwork-primary,
+  .canvas-ai-stage:is([data-loading-effect="composer"], [data-loading-effect="pixels"]) .canvas-ai-selection {
+    transition: none;
+  }
+}

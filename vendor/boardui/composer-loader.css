@@ -1,0 +1,39 @@
+/*
+ * Scoped vanilla-CSS equivalents for the utilities used by BoardUI's original
+ * ComposerLoader. No Tailwind reset or global theme is applied to the sandbox.
+ * The SVG stroke animation is copied from BoardUI's styles/globals.css.
+ */
+.canvas-ai-library-mount .relative { position: relative; }
+.canvas-ai-library-mount .absolute { position: absolute; }
+.canvas-ai-library-mount .inset-0 { inset: 0; }
+.canvas-ai-library-mount .overflow-hidden { overflow: hidden; }
+.canvas-ai-library-mount .pointer-events-none { pointer-events: none; }
+.canvas-ai-library-mount .bg-background-primary-default {
+  background-color: var(--boardui-loader-surface, #f8f9f9);
+}
+.canvas-ai-library-mount .shadow-xs {
+  box-shadow: var(--boardui-loader-shadow, 0 1px 2px rgb(0 0 0 / .05));
+}
+
+/* Let the island fill the existing Canvas E loading frame without resizing it. */
+.canvas-ai-library-mount .canvas-ai-composer-loader,
+.canvas-ai-library-mount .canvas-ai-composer-loader > .relative {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes bui-composer-loader-dash {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-ai-library-mount .bui-composer-loader-rect {
+    animation: none !important;
+  }
+
+  /* Also disable the component's inline opacity transition. */
+  .canvas-ai-library-mount .canvas-ai-composer-loader > span {
+    transition: none !important;
+  }
+}

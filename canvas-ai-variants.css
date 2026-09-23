@@ -1,0 +1,70 @@
+/* D/E are isolated loading studies on Canvas B's existing five-step flow. */
+:is([data-sandbox-variant="canvas-d"], [data-sandbox-variant="canvas-e"]) .canvas-board {
+  --selection-blue: #3e63dd;
+  --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
+  isolation: isolate;
+}
+
+/* D: a real image behind a frosted pane; no colored edge or shimmer. */
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader {
+  overflow: hidden;
+  background: #dce0df;
+  box-shadow: 0 4px 16px rgb(0 0 0 / .1);
+}
+
+.canvas-ai-glass-image {
+  position: absolute;
+  inset: -15%;
+  width: 130%;
+  height: 130%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.canvas-ai-glass-pane {
+  position: absolute;
+  inset: 0;
+  background: rgb(245 247 247 / .35);
+  -webkit-backdrop-filter: blur(18px) saturate(.45);
+  backdrop-filter: blur(18px) saturate(.45);
+  pointer-events: none;
+}
+
+/* E: a fixed square with an inward alpha fade. Only the color field rotates. */
+.canvas-ai-stage[data-loading-effect="glow"] .canvas-ai-loader {
+  overflow: hidden;
+  background: #f8f9f9;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.canvas-ai-glow-mask {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Figma 2640:34802: 100% → 45.7% → 9.1% → transparent alpha stops. */
+  --edge-fade: #000 0%, rgb(0 0 0 / .457) 4.0613%, rgb(0 0 0 / .091) 20.835%, transparent 45.023%;
+  -webkit-mask-image: linear-gradient(0deg, var(--edge-fade)), linear-gradient(90deg, var(--edge-fade)), linear-gradient(180deg, var(--edge-fade)), linear-gradient(270deg, var(--edge-fade));
+  mask-image: linear-gradient(0deg, var(--edge-fade)), linear-gradient(90deg, var(--edge-fade)), linear-gradient(180deg, var(--edge-fade)), linear-gradient(270deg, var(--edge-fade));
+}
+
+.canvas-ai-glow-orbit {
+  position: absolute;
+  inset: -25%;
+  background: conic-gradient(from 45deg, #def7f9, #ddf8f5 90deg, rgb(221 249 242 / .15) 180deg, #ddf9f2 270deg, #def7f9);
+  transform-origin: center;
+  animation: canvas-ai-edge-spin 3.8s linear infinite;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .canvas-ai-glass-image { filter: blur(18px) saturate(.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-ai-glow-orbit { animation: none; }
+  .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-artwork-primary,
+  .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-selection { transition: none; }
+}

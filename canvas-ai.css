@@ -1,0 +1,630 @@
+/* Canvas B/C: Figma node 2543:12220, layered on the existing Canvas A shell. */
+
+[data-sandbox-variant="canvas-b"] .canvas-board,
+[data-sandbox-variant="canvas-c"] .canvas-board {
+  --selection-blue: #3e63dd;
+  --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
+  isolation: isolate;
+}
+
+.canvas-ai-stage {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.canvas-ai-stage button,
+.canvas-ai-stage input { font: inherit; }
+
+.canvas-ai-artwork,
+.canvas-ai-result,
+.canvas-ai-loader {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #f4f4f3;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+}
+
+.canvas-ai-artwork {
+  z-index: 2;
+  cursor: pointer;
+}
+
+.canvas-ai-artwork img,
+.canvas-ai-result img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.canvas-ai-result {
+  z-index: 3;
+  opacity: 0;
+  transform: scale(.985);
+  transform-origin: center;
+}
+
+.canvas-ai-stage[data-state="done"] figure.canvas-ai-result {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 240ms var(--ease-out-ui), transform 240ms var(--ease-out-ui);
+}
+
+.canvas-ai-selection {
+  position: absolute;
+  z-index: 4;
+  border: 1.5px solid var(--selection-blue);
+  pointer-events: none;
+}
+
+.canvas-ai-stage[data-state="prompt"] .canvas-ai-selection,
+.canvas-ai-stage[data-state="selected"] .canvas-ai-selection {
+  opacity: 1;
+}
+
+.canvas-ai-stage[data-state="generating"] .canvas-ai-selection,
+.canvas-ai-stage[data-state="done"] .canvas-ai-selection {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.canvas-ai-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--selection-blue);
+  background: #fff;
+}
+
+.canvas-ai-handle:nth-child(1) { top: -5px; left: -5px; }
+.canvas-ai-handle:nth-child(2) { top: -5px; right: -5px; }
+.canvas-ai-handle:nth-child(3) { bottom: -5px; left: -5px; }
+.canvas-ai-handle:nth-child(4) { right: -5px; bottom: -5px; }
+
+.canvas-ai-toolbar,
+.canvas-ai-prompt {
+  position: absolute;
+  z-index: 7;
+  top: -52px;
+  left: 50%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  border: .5px solid rgba(0, 0, 0, .09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, .06);
+  transform: translateX(-50%);
+  transform-origin: center bottom;
+}
+
+.canvas-ai-toolbar {
+  gap: 4px;
+  padding: 6px 8px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.canvas-ai-stage[data-state="selected"] .canvas-ai-toolbar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.canvas-ai-action,
+.canvas-ai-icon-action,
+.canvas-ai-submit {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+}
+
+.canvas-ai-action {
+  height: 32px;
+  grid-auto-flow: column;
+  gap: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.canvas-ai-action img,
+.canvas-ai-icon-action img {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.canvas-ai-icon-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.canvas-ai-action:hover,
+.canvas-ai-icon-action:hover { background: rgba(0, 0, 0, .045); }
+
+.canvas-ai-action:active,
+.canvas-ai-icon-action:active,
+.canvas-ai-submit:active { transform: scale(.96); }
+
+.canvas-ai-divider {
+  width: .5px;
+  height: 20px;
+  margin: 0 2px;
+  background: rgba(0, 0, 0, .09);
+}
+
+.canvas-ai-prompt {
+  width: min(378px, calc(100vw - 380px));
+  height: 44px;
+  min-width: 300px;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  background: var(--bg-base);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .08), 0 0 .5px rgba(0, 0, 0, .24);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.canvas-ai-stage[data-state="prompt"] .canvas-ai-prompt {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.canvas-ai-prompt > img {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.canvas-ai-prompt input {
+  min-width: 0;
+  height: 28px;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.canvas-ai-prompt input::placeholder { color: #838383; }
+
+.canvas-ai-intent-control {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: 8px;
+}
+
+.canvas-ai-intent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 4px 0 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.canvas-ai-intent img,
+.canvas-ai-intent-menu img {
+  display: block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.canvas-ai-intent-menu {
+  position: fixed;
+  z-index: 10;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  width: 140px;
+  margin: 0;
+  padding: 6px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--bg-base);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .06), 0 0 .5px rgba(0, 0, 0, .24);
+  transform-origin: top left;
+}
+
+.canvas-ai-intent-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.canvas-ai-intent-menu button[aria-checked="true"] { background: rgba(0, 0, 0, .04); }
+.canvas-ai-intent-menu button[aria-checked="false"] img { visibility: hidden; }
+
+.canvas-ai-prompt button:focus-visible,
+.canvas-ai-action:focus-visible,
+.canvas-ai-icon-action:focus-visible {
+  outline: 2px solid var(--selection-blue);
+  outline-offset: 2px;
+}
+
+.canvas-ai-prompt:has(input:focus-visible) {
+  outline: 2px solid rgba(62, 99, 221, .3);
+  outline-offset: 2px;
+}
+
+.canvas-ai-prompt button,
+.canvas-ai-prompt input { touch-action: manipulation; }
+
+.canvas-ai-intent:active { color: var(--text-primary); }
+
+@media (hover: hover) and (pointer: fine) {
+  .canvas-ai-intent:hover { color: var(--text-secondary); }
+  .canvas-ai-intent-menu button:hover { background: rgba(0, 0, 0, .06); }
+}
+
+@media (pointer: coarse) {
+  .canvas-ai-prompt {
+    min-height: calc(44px / var(--canvas-ai-scale, 1) + 16px);
+    top: calc(-44px / var(--canvas-ai-scale, 1) - 24px);
+  }
+  .canvas-ai-prompt input { font-size: 16px; }
+  .canvas-ai-intent { min-height: calc(44px / var(--canvas-ai-scale, 1)); }
+  .canvas-ai-intent-menu button { min-height: 44px; }
+  .canvas-ai-prompt .canvas-ai-submit {
+    width: calc(44px / var(--canvas-ai-scale, 1));
+    height: calc(44px / var(--canvas-ai-scale, 1));
+  }
+}
+
+.canvas-ai-chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.canvas-ai-chat-attachments img {
+  display: block;
+  width: 72px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* Interaction C message layout, isolated from the original Canvas A chat. */
+.canvas-chat-c .message { display: flex; flex-direction: column; margin: 0 0 16px; }
+.canvas-chat-c .message.user { align-items: flex-end; }
+.canvas-chat-c .message-copy { min-width: 0; font-size: 14px; line-height: 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.canvas-chat-c .message.user .message-copy {
+  max-width: min(220px, 100%);
+  padding: 8px 12px;
+  border-radius: 16px 2px 16px 16px;
+  background: #f1f1f1;
+}
+.canvas-chat-c .message.assistant .message-copy { width: 100%; padding: 0; }
+.canvas-chat-c .working-message { color: var(--text-tertiary); animation: canvas-chat-breathe 1.4s ease-in-out infinite; }
+.canvas-chat-c .message-actions { height: 24px; align-items: center; padding: 0; margin-top: 4px; }
+.canvas-chat-c .message-actions button { opacity: .46; }
+.canvas-chat-c .message-actions button[aria-pressed="true"] { opacity: 1; background: var(--bg-subtle); }
+.canvas-chat-c .message-actions button:focus-visible { opacity: 1; outline: 2px solid var(--blue); outline-offset: 2px; }
+@keyframes canvas-chat-breathe { 50% { opacity: .45; } }
+
+@media (hover: hover) and (pointer: fine) {
+  .canvas-chat-c .message-actions button:hover { opacity: 1; }
+}
+
+@media (pointer: coarse) {
+  .canvas-chat-c .message-actions { height: 44px; }
+  .canvas-chat-c .message-actions button { width: 44px; height: 44px; }
+}
+
+@media (max-width: 720px) {
+  .is-canvas-chat-open .agent-panel.has-new-session-view {
+    display: grid;
+    position: absolute;
+    z-index: 10;
+    inset: 0 0 0 auto;
+    width: min(348px, 100%);
+    height: 100%;
+    background: var(--bg-base);
+  }
+  .is-canvas-chat-open .composer textarea { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-chat-c .working-message { animation: none; }
+}
+
+.canvas-ai-submit {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #202020;
+}
+
+.canvas-ai-submit:disabled {
+  opacity: .34;
+  cursor: default;
+}
+
+.canvas-ai-submit img {
+  width: 14px;
+  height: 14px;
+}
+
+.canvas-ai-loader {
+  z-index: 5;
+  display: none;
+  overflow: visible;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .1);
+}
+
+.canvas-ai-stage[data-state="generating"] .canvas-ai-loader {
+  display: block;
+}
+
+.canvas-ai-loader-edge,
+.canvas-ai-loader-surface,
+.canvas-ai-loader-shimmer {
+  position: absolute;
+  pointer-events: none;
+}
+
+.canvas-ai-loader-edge {
+  z-index: 0;
+  inset: -7px;
+  overflow: hidden;
+  opacity: .72;
+  filter: blur(8px);
+}
+
+.canvas-ai-loader-edge::before {
+  content: "";
+  position: absolute;
+  inset: -42%;
+  background: conic-gradient(from 45deg, #bfeff5, #eee6ff, #f9e8d5, #bdede7, #bfeff5);
+  animation: canvas-ai-edge-spin 3.8s linear infinite;
+  will-change: transform;
+}
+
+.canvas-ai-loader-surface {
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 70% 42%, rgba(80, 82, 86, .48), transparent 39%),
+    radial-gradient(ellipse at 28% 22%, rgba(221, 226, 218, .88), transparent 44%),
+    linear-gradient(135deg, rgba(232, 239, 235, .96), rgba(201, 204, 205, .92));
+  backdrop-filter: blur(18px) saturate(.7);
+  -webkit-backdrop-filter: blur(18px) saturate(.7);
+}
+
+.canvas-ai-loader-shimmer {
+  z-index: 2;
+  top: -15%;
+  bottom: -15%;
+  left: -55%;
+  width: 48%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .46), transparent);
+  transform: translateX(0) skewX(-12deg);
+  animation: canvas-ai-shimmer 1.7s var(--ease-out-ui) infinite;
+  will-change: transform;
+}
+
+/* B: a vertical sweep over fixed glass, with a separate clockwise color field. */
+[data-sandbox-variant="canvas-b"] .canvas-ai-loader-edge::before {
+  filter: saturate(.7);
+  animation-duration: 5.6s;
+  animation-timing-function: linear;
+  animation-direction: normal;
+}
+
+[data-sandbox-variant="canvas-b"] .canvas-ai-loader-shimmer {
+  inset: 0;
+  width: auto;
+  overflow: hidden;
+  background: none;
+  transform: none;
+  animation: none;
+  will-change: auto;
+}
+
+[data-sandbox-variant="canvas-b"] .canvas-ai-loader-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -48%;
+  width: 48%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / .46), transparent);
+  transform: translateX(0);
+  animation: canvas-b-vertical-sweep 2.8s linear infinite;
+}
+
+.canvas-ai-working-mark {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.canvas-ai-working-mark .ai-working-logo {
+  width: 24px;
+  height: 24px;
+}
+
+/* Match Interaction A's completion status, without leaving a running canvas. */
+.canvas-ai-working-mark.is-done::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.canvas-ai-stage[data-state="generating"] .canvas-ai-working-mark,
+.canvas-ai-stage[data-state="done"] .canvas-ai-working-mark { opacity: 1; }
+
+.canvas-ai-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Single selection — matches the first Figma row. */
+.canvas-ai-stage[data-mode="single"] .canvas-ai-artwork-primary {
+  top: 35%;
+  left: 48%;
+  width: 266px;
+  height: 266px;
+  transition: transform 240ms cubic-bezier(.645, .045, .355, 1);
+}
+
+.canvas-ai-stage[data-mode="single"] .canvas-ai-selection {
+  top: 35%;
+  left: 48%;
+  width: 266px;
+  height: 266px;
+  transition: transform 240ms cubic-bezier(.645, .045, .355, 1);
+}
+
+.canvas-ai-stage[data-mode="single"][data-state="generating"] .canvas-ai-artwork-primary,
+.canvas-ai-stage[data-mode="single"][data-state="done"] .canvas-ai-artwork-primary,
+.canvas-ai-stage[data-mode="single"][data-state="generating"] .canvas-ai-selection,
+.canvas-ai-stage[data-mode="single"][data-state="done"] .canvas-ai-selection {
+  transform: translateX(-280px);
+}
+
+.canvas-ai-stage[data-mode="single"] .canvas-ai-loader {
+  top: 35%;
+  left: 48%;
+  width: 266px;
+  height: 266px;
+}
+
+.canvas-ai-stage[data-mode="single"] .canvas-ai-result {
+  top: calc(35% + 1px);
+  left: 48%;
+  width: 336px;
+  height: 199px;
+}
+
+.canvas-ai-stage[data-mode="single"] .canvas-ai-working-mark {
+  top: calc(35% - 25px);
+  left: calc(48% - 281px);
+}
+
+/* Multi selection — matches the second Figma row. */
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork-primary {
+  top: 21%;
+  left: 7%;
+  width: 266px;
+  height: 266px;
+}
+
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork-secondary {
+  top: 61%;
+  left: 42%;
+  width: 282px;
+  height: 199px;
+}
+
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-selection {
+  /* Bounds come from the union of both artwork rectangles in canvas-ai.js. */
+  box-sizing: border-box;
+}
+
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-loader,
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-result {
+  top: 21%;
+  left: 71%;
+  width: 267px;
+  height: 267px;
+}
+
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-working-mark {
+  top: calc(21% - 25px);
+  left: 7%;
+}
+
+@keyframes canvas-ai-edge-spin { to { transform: rotate(360deg); } }
+
+@keyframes canvas-ai-shimmer {
+  0% { transform: translateX(0) skewX(-12deg); }
+  68%, 100% { transform: translateX(340%) skewX(-12deg); }
+}
+
+@keyframes canvas-b-vertical-sweep {
+  /* Fully outside at both ends, so the loop resets without a visible jump. */
+  to { transform: translateX(310%); }
+}
+
+@media (max-width: 1180px) {
+  .canvas-ai-stage { --canvas-ai-scale: .82; transform: scale(.82); transform-origin: center; }
+  .canvas-ai-stage[data-mode="single"] .canvas-ai-artwork-primary,
+  .canvas-ai-stage[data-mode="single"] .canvas-ai-selection { left: 38%; }
+  .canvas-ai-stage[data-mode="single"] .canvas-ai-loader,
+  .canvas-ai-stage[data-mode="single"] .canvas-ai-result { left: 38%; }
+  .canvas-ai-stage[data-mode="single"] .canvas-ai-working-mark { left: calc(38% - 281px); }
+}
+
+@media (max-width: 720px) {
+  .canvas-ai-stage { --canvas-ai-scale: .62; transform: scale(.62); transform-origin: 44% 42%; }
+  .canvas-ai-prompt { width: 378px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sandbox-variant="canvas-b"] .canvas-ai-loader-edge::before,
+  [data-sandbox-variant="canvas-b"] .canvas-ai-loader-shimmer::before { animation: none; }
+  .canvas-ai-loader-edge::before,
+  .canvas-ai-loader-shimmer { animation: none; }
+  .canvas-ai-stage[data-state="done"] figure.canvas-ai-result { transition: none; }
+  .canvas-ai-action,
+  .canvas-ai-icon-action,
+  .canvas-ai-submit { transition: none; }
+}

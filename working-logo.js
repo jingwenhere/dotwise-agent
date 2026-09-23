@@ -3,11 +3,14 @@ import { BINDING, OPTS, frameLogoWork, paintFrame } from './assets/figma/working
 const LOGO_SIZE = 24;
 const LOGO_SPEED = 1.7;
 const canvases = new Set();
+const logoStarts = new WeakMap();
 
 function prepareCanvas(canvas) {
   if (!(canvas instanceof HTMLCanvasElement) || canvases.has(canvas)) return;
   canvas.width = LOGO_SIZE;
   canvas.height = LOGO_SIZE;
+  // Opt in to a repeatable logo-first sequence; document animations keep their clock.
+  if (canvas.dataset.workingLogoStart === 'logo') logoStarts.set(canvas, performance.now());
   canvases.add(canvas);
 }
 
@@ -48,7 +51,11 @@ function render(now) {
       canvases.delete(canvas);
       return;
     }
-    paintCanvas(canvas, time);
+    const start = logoStarts.get(canvas);
+    const localTime = start === undefined || reducedMotion.matches
+      ? time
+      : 5.35 + ((now - start) / 1000) * LOGO_SPEED;
+    paintCanvas(canvas, localTime);
   });
   window.requestAnimationFrame(render);
 }
