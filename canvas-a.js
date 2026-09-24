@@ -663,14 +663,26 @@
   function renderCanvasComposerImages() {
     if (!canvasComposerImages) return;
     const images = canvasSelectionImages.length ? canvasSelectionImages : canvasChatImages;
-    canvasComposerImages.replaceChildren(...images.map(({ src, alt }) => {
-      const image = document.createElement('img');
-      Object.assign(image, { src, alt, title: alt, width: 56, height: 48 });
-      return image;
-    }));
-    canvasComposerImages.hidden = !images.length;
-    canvasComposerImages.setAttribute('aria-label', `${images.length} referenced image${images.length === 1 ? '' : 's'}`);
-    chatComposer.classList.toggle('has-canvas-images', images.length > 0);
+    const createReferenceChip = (src, name, isImage = false) => {
+      const chip = document.createElement('div');
+      chip.className = 'file-chip canvas-ai-reference-chip';
+      chip.title = name;
+      const icon = document.createElement('img');
+      Object.assign(icon, { src, alt: '', width: 20, height: 20 });
+      if (isImage) icon.className = 'canvas-ai-reference-preview';
+      const label = document.createElement('span');
+      label.textContent = name;
+      chip.append(icon, label);
+      return chip;
+    };
+    canvasComposerImages.replaceChildren(
+      createReferenceChip('assets/figma/canvas-a/presentation.svg', 'Canvas'),
+      ...images.map(({ src, alt }) => {
+        const name = decodeURIComponent(new URL(src, document.baseURI).pathname.split('/').pop()) || alt;
+        return createReferenceChip(src, name, true);
+      }),
+    );
+    canvasComposerImages.setAttribute('aria-label', `Canvas file and ${images.length} referenced image${images.length === 1 ? '' : 's'}`);
   }
 
   function setCanvasChatSelection(images) {
