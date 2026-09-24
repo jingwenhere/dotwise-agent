@@ -1,4 +1,4 @@
-/* Canvas A–E share the document composer and a single world-space camera. */
+/* Canvas A–D share the document composer and a single world-space camera. */
 
 [data-selection-mode] .canvas-board {
   --selection-blue: #3e63dd;

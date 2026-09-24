@@ -1,5 +1,5 @@
-/* B/D/E share the canvas layout; each library stays inside its loading frame. */
-:is([data-sandbox-variant="canvas-b"], [data-sandbox-variant="canvas-d"], [data-sandbox-variant="canvas-e"]) .canvas-board {
+/* B/D share the canvas layout; each library stays inside its loading frame. */
+:is([data-sandbox-variant="canvas-b"], [data-sandbox-variant="canvas-d"]) .canvas-board {
   --selection-blue: #3e63dd;
   --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
   isolation: isolate;
