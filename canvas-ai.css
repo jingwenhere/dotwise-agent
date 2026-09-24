@@ -573,6 +573,8 @@
   height: 266px;
 }
 
+/* The pixel reveal starts in its final frame, so completion cannot resize it. */
+.canvas-ai-stage[data-mode="single"][data-loading-effect="pixels"] .canvas-ai-loader,
 .canvas-ai-stage[data-mode="single"] .canvas-ai-result {
   top: 0;
   left: 280px;
