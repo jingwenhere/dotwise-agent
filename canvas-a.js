@@ -688,12 +688,6 @@
   function setCanvasChatSelection(images) {
     canvasSelectionImages = images.map(({ src, alt }) => ({ src, alt }));
     renderCanvasComposerImages();
-    if (canvasSelectionImages.length && contentShell.classList.contains('is-canvas-view')) {
-      if (canvasChatButton.getAttribute('aria-expanded') !== 'true') canvasChatButton.click();
-      // Make the references visible as soon as selection finishes, without
-      // stealing focus from the canvas prompt or submitting a message.
-      activateNewSession({ focus: false });
-    }
   }
 
   // Interaction C's Ask flow: user message, 2400ms Working preview, then reply.
@@ -2737,7 +2731,10 @@
     agentPanel.hidden = !isOpen;
     agentPanel.inert = !isOpen;
     canvasChatButton.setAttribute('aria-expanded', String(isOpen));
-    if (isOpen) setAgentPanelCollapsed(false, { focus: false });
+    if (isOpen) {
+      setAgentPanelCollapsed(false, { focus: false });
+      if (window.CanvasChat) activateNewSession({ focus: false });
+    }
   });
   canvasZoomButton.addEventListener('click', () => {
     const zoomValues = [100, 125, 75];
