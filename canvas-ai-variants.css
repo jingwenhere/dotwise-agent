@@ -1,4 +1,9 @@
 /* D/E are isolated loading studies on Canvas B's existing five-step flow. */
+.canvas-board {
+  /* Canvas E's existing #ddf9f2 mint, shared by both edge-glow studies. */
+  --canvas-edge-glow-color: oklch(.96 .031 178.93);
+}
+
 :is([data-sandbox-variant="canvas-d"], [data-sandbox-variant="canvas-e"]) .canvas-board {
   --selection-blue: #3e63dd;
   --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
@@ -54,7 +59,7 @@
 .canvas-ai-glow-orbit {
   position: absolute;
   inset: -25%;
-  background: conic-gradient(from 45deg, #def7f9, #ddf8f5 90deg, rgb(221 249 242 / .15) 180deg, #ddf9f2 270deg, #def7f9);
+  background: conic-gradient(from 45deg, var(--canvas-edge-glow-color), var(--canvas-edge-glow-color) 90deg, color-mix(in srgb, var(--canvas-edge-glow-color) 15%, transparent) 180deg, var(--canvas-edge-glow-color) 270deg, var(--canvas-edge-glow-color));
   transform-origin: center;
   animation: canvas-ai-edge-spin 3.8s linear infinite;
 }

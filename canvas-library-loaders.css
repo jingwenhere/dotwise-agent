@@ -19,6 +19,12 @@
 }
 
 .canvas-ai-library-mount { position: relative; }
+
+/* Recolor all three BoardUI glow layers, including its interpolated middle stop. */
+.canvas-ai-stage[data-loading-effect="composer"] .canvas-ai-composer-loader stop {
+  stop-color: var(--canvas-edge-glow-color);
+}
+
 .canvas-ai-library-still {
   display: grid;
   place-items: center;
