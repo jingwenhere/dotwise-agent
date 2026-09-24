@@ -1,11 +1,12 @@
-/* Canvas B/C: Figma node 2543:12220, layered on the existing Canvas A shell. */
+/* Canvas C–G share the document composer and a single world-space camera. */
 
-[data-sandbox-variant="canvas-b"] .canvas-board,
-[data-sandbox-variant="canvas-c"] .canvas-board {
+[data-selection-mode] .canvas-board {
   --selection-blue: #3e63dd;
   --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
   isolation: isolate;
 }
+
+[data-selection-mode] .canvas-board::before { display: none; }
 
 .canvas-ai-stage {
   position: absolute;
@@ -13,6 +14,24 @@
   inset: 0;
   overflow: hidden;
   user-select: none;
+}
+
+.canvas-ai-camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.canvas-ai-stage[data-camera-ready] .canvas-ai-camera {
+  transition: transform 280ms cubic-bezier(.45, 0, .2, 1);
+}
+
+.canvas-ai-grid {
+  position: absolute;
+  inset: -1500px;
+  background-image: radial-gradient(circle, #b9b9b9 0 .75px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events: none;
 }
 
 .canvas-ai-stage button,
@@ -36,6 +55,9 @@
   cursor: pointer;
 }
 
+.canvas-ai-artwork:focus { outline: none; }
+.canvas-ai-artwork:focus-visible { outline: 2px solid var(--selection-blue); outline-offset: 4px; }
+
 .canvas-ai-artwork img,
 .canvas-ai-result img {
   display: block;
@@ -48,12 +70,14 @@
 .canvas-ai-result {
   z-index: 3;
   opacity: 0;
+  visibility: hidden;
   transform: scale(.985);
   transform-origin: center;
 }
 
 .canvas-ai-stage[data-state="done"] figure.canvas-ai-result {
   opacity: 1;
+  visibility: visible;
   transform: scale(1);
   transition: opacity 240ms var(--ease-out-ui), transform 240ms var(--ease-out-ui);
 }
@@ -63,11 +87,14 @@
   z-index: 4;
   border: 1.5px solid var(--selection-blue);
   pointer-events: none;
+  box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
 }
 
-.canvas-ai-stage[data-state="prompt"] .canvas-ai-selection,
-.canvas-ai-stage[data-state="selected"] .canvas-ai-selection {
+.canvas-ai-stage[data-state="prompt"] .canvas-ai-selection {
   opacity: 1;
+  visibility: visible;
 }
 
 .canvas-ai-stage[data-state="generating"] .canvas-ai-selection,
@@ -129,7 +156,7 @@
   place-items: center;
   border: 0;
   background: transparent;
-  color: #111;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -171,10 +198,11 @@
 }
 
 .canvas-ai-prompt {
-  width: min(378px, calc(100vw - 380px));
-  height: 44px;
-  min-width: 300px;
-  gap: 8px;
+  width: 480px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 0;
+  gap: 16px;
   padding: 8px 10px;
   border: 0;
   background: var(--bg-base);
@@ -182,6 +210,7 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  animation: none;
 }
 
 .canvas-ai-stage[data-state="prompt"] .canvas-ai-prompt {
@@ -190,7 +219,7 @@
   pointer-events: auto;
 }
 
-.canvas-ai-prompt > img {
+.canvas-ai-prompt .prompt-agent-icon {
   width: 24px;
   height: 24px;
   flex: 0 0 auto;
@@ -198,42 +227,49 @@
 
 .canvas-ai-prompt input {
   min-width: 0;
-  height: 28px;
+  height: 24px;
   flex: 1;
   border: 0;
   outline: 0;
+  padding: 0;
   background: transparent;
-  color: #111;
+  color: var(--text-primary);
   font-size: 15px;
-  line-height: 20px;
+  line-height: 18px;
 }
 
-.canvas-ai-prompt input::placeholder { color: #838383; }
+.canvas-ai-prompt input::placeholder { color: var(--text-placeholder); }
 
 .canvas-ai-intent-control {
   position: relative;
   flex: 0 0 auto;
-  margin-left: 8px;
 }
 
 .canvas-ai-intent {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 28px;
-  padding: 4px 0 4px 6px;
+  gap: 6px;
+  height: 20px;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   color: var(--text-tertiary);
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.canvas-ai-intent img,
+.canvas-ai-intent img {
+  display: block;
+  width: 12px;
+  height: 12px;
+  opacity: .55;
+}
+
 .canvas-ai-intent-menu img {
   display: block;
   flex: 0 0 16px;
@@ -282,14 +318,11 @@
 .canvas-ai-prompt button:focus-visible,
 .canvas-ai-action:focus-visible,
 .canvas-ai-icon-action:focus-visible {
-  outline: 2px solid var(--selection-blue);
+  outline: 2px solid rgba(32, 32, 32, .3);
   outline-offset: 2px;
 }
 
-.canvas-ai-prompt:has(input:focus-visible) {
-  outline: 2px solid rgba(62, 99, 221, .3);
-  outline-offset: 2px;
-}
+.canvas-ai-prompt:focus-within { outline: none; }
 
 .canvas-ai-prompt button,
 .canvas-ai-prompt input { touch-action: manipulation; }
@@ -303,15 +336,16 @@
 
 @media (pointer: coarse) {
   .canvas-ai-prompt {
-    min-height: calc(44px / var(--canvas-ai-scale, 1) + 16px);
-    top: calc(-44px / var(--canvas-ai-scale, 1) - 24px);
+    min-height: 56px;
+    gap: 8px;
   }
   .canvas-ai-prompt input { font-size: 16px; }
-  .canvas-ai-intent { min-height: calc(44px / var(--canvas-ai-scale, 1)); }
+  .canvas-ai-intent { min-height: 44px; }
   .canvas-ai-intent-menu button { min-height: 44px; }
   .canvas-ai-prompt .canvas-ai-submit {
-    width: calc(44px / var(--canvas-ai-scale, 1));
-    height: calc(44px / var(--canvas-ai-scale, 1));
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
   }
 }
 
@@ -382,7 +416,7 @@
 }
 
 .canvas-ai-submit:disabled {
-  opacity: .34;
+  opacity: 1;
   cursor: default;
 }
 
@@ -516,60 +550,44 @@
   white-space: nowrap;
 }
 
-/* Single selection — matches the first Figma row. */
+/* World coordinates are stable before, during, and after generation. */
 .canvas-ai-stage[data-mode="single"] .canvas-ai-artwork-primary {
-  top: 35%;
-  left: 48%;
+  top: 0;
+  left: 0;
   width: 266px;
   height: 266px;
-  transition: transform 240ms cubic-bezier(.645, .045, .355, 1);
-}
-
-.canvas-ai-stage[data-mode="single"] .canvas-ai-selection {
-  top: 35%;
-  left: 48%;
-  width: 266px;
-  height: 266px;
-  transition: transform 240ms cubic-bezier(.645, .045, .355, 1);
-}
-
-.canvas-ai-stage[data-mode="single"][data-state="generating"] .canvas-ai-artwork-primary,
-.canvas-ai-stage[data-mode="single"][data-state="done"] .canvas-ai-artwork-primary,
-.canvas-ai-stage[data-mode="single"][data-state="generating"] .canvas-ai-selection,
-.canvas-ai-stage[data-mode="single"][data-state="done"] .canvas-ai-selection {
-  transform: translateX(-280px);
 }
 
 .canvas-ai-stage[data-mode="single"] .canvas-ai-loader {
-  top: 35%;
-  left: 48%;
+  top: 0;
+  left: 280px;
   width: 266px;
   height: 266px;
 }
 
 .canvas-ai-stage[data-mode="single"] .canvas-ai-result {
-  top: calc(35% + 1px);
-  left: 48%;
+  top: 0;
+  left: 280px;
   width: 336px;
   height: 199px;
 }
 
 .canvas-ai-stage[data-mode="single"] .canvas-ai-working-mark {
-  top: calc(35% - 25px);
-  left: calc(48% - 281px);
+  top: -25px;
+  left: 0;
 }
 
 /* Multi selection — matches the second Figma row. */
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork-primary {
-  top: 21%;
-  left: 7%;
+  top: 0;
+  left: 0;
   width: 266px;
   height: 266px;
 }
 
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork-secondary {
-  top: 61%;
-  left: 42%;
+  top: 285px;
+  left: 300px;
   width: 282px;
   height: 199px;
 }
@@ -581,15 +599,15 @@
 
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-loader,
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-result {
-  top: 21%;
-  left: 71%;
+  top: 0;
+  left: 620px;
   width: 267px;
   height: 267px;
 }
 
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-working-mark {
-  top: calc(21% - 25px);
-  left: 7%;
+  top: -25px;
+  left: 0;
 }
 
 @keyframes canvas-ai-edge-spin { to { transform: rotate(360deg); } }
@@ -604,21 +622,8 @@
   to { transform: translateX(310%); }
 }
 
-@media (max-width: 1180px) {
-  .canvas-ai-stage { --canvas-ai-scale: .82; transform: scale(.82); transform-origin: center; }
-  .canvas-ai-stage[data-mode="single"] .canvas-ai-artwork-primary,
-  .canvas-ai-stage[data-mode="single"] .canvas-ai-selection { left: 38%; }
-  .canvas-ai-stage[data-mode="single"] .canvas-ai-loader,
-  .canvas-ai-stage[data-mode="single"] .canvas-ai-result { left: 38%; }
-  .canvas-ai-stage[data-mode="single"] .canvas-ai-working-mark { left: calc(38% - 281px); }
-}
-
-@media (max-width: 720px) {
-  .canvas-ai-stage { --canvas-ai-scale: .62; transform: scale(.62); transform-origin: 44% 42%; }
-  .canvas-ai-prompt { width: 378px; }
-}
-
 @media (prefers-reduced-motion: reduce) {
+  .canvas-ai-stage[data-camera-ready] .canvas-ai-camera { transition: none; }
   [data-sandbox-variant="canvas-b"] .canvas-ai-loader-edge::before,
   [data-sandbox-variant="canvas-b"] .canvas-ai-loader-shimmer::before { animation: none; }
   .canvas-ai-loader-edge::before,
