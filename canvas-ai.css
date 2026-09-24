@@ -322,6 +322,14 @@
   outline-offset: 2px;
 }
 
+/* Menu rows use their fill for focus, not the composer's outside focus ring. */
+.canvas-ai-prompt .canvas-ai-intent-menu button:focus {
+  outline: none;
+  outline-offset: 0;
+}
+
+.canvas-ai-intent-menu button:focus-visible { background: rgba(0, 0, 0, .08); }
+
 .canvas-ai-prompt:focus-within { outline: none; }
 
 .canvas-ai-prompt button,
