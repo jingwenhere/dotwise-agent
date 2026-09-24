@@ -22,7 +22,8 @@
 
 /* Recolor all three BoardUI glow layers, including its interpolated middle stop. */
 .canvas-ai-stage[data-loading-effect="composer"] .canvas-ai-composer-loader stop {
-  stop-color: var(--canvas-edge-glow-color);
+  /* 50% stronger tint: 1.5× chroma and distance from white; keep the mint hue. */
+  stop-color: oklch(.94 .0465 178.93);
 }
 
 .canvas-ai-library-still {
