@@ -2737,6 +2737,10 @@
     }
   });
   canvasZoomButton.addEventListener('click', () => {
+    if (window.CanvasViewport) {
+      window.CanvasViewport.fit();
+      return;
+    }
     const zoomValues = [100, 125, 75];
     const current = Number.parseInt(canvasZoomButton.textContent, 10);
     const next = zoomValues[(zoomValues.indexOf(current) + 1) % zoomValues.length];

@@ -18,7 +18,7 @@
   const loadingLayers = usesLibraryLoader
     ? '<div class="canvas-ai-library-mount"></div>'
     : loadingEffect === 'glass'
-    ? `<img class="canvas-ai-glass-image" src="${asset(sourceImage)}" alt="" /><span class="canvas-ai-glass-pane" data-node-id="2613:32457"></span>`
+    ? `<img class="canvas-ai-glass-image" src="${asset(sourceImage)}" alt="" /><span class="canvas-ai-glass-pane" data-node-id="2613:32457"><span class="canvas-ai-glass-cloud"></span><span class="canvas-ai-glass-cloud"></span><span class="canvas-ai-glass-cloud"></span></span>`
     : loadingEffect === 'glow'
       ? '<span class="canvas-ai-glow-mask" data-node-id="2640:34802"><span class="canvas-ai-glow-orbit"></span></span>'
       : '<span class="canvas-ai-loader-edge"></span><span class="canvas-ai-loader-surface"></span><span class="canvas-ai-loader-shimmer"></span>';
@@ -156,29 +156,31 @@
     });
   };
 
-  const frameCanvas = () => {
+  const positionPrompt = ({ x, y, scale }) => {
     const width = board.clientWidth;
     const height = board.clientHeight;
     if (!width || !height) return;
     syncSelectionBounds();
-    const content = [...sources];
-    if (stage.dataset.state === 'generating') content.push(stage.querySelector('.canvas-ai-loader'));
-    if (stage.dataset.state === 'done') content.push(stage.querySelector('.canvas-ai-result'));
-    const bounds = boundsOf(content);
-    const zoom = Number.parseFloat(getComputedStyle(board).getPropertyValue('--canvas-zoom')) || 1;
-    const scale = Math.min(1, Math.max(1, width - 64) / bounds.width, Math.max(1, height - 160) / bounds.height) * zoom;
-    const x = (width - bounds.width * scale) / 2 - bounds.left * scale;
-    const y = (height - bounds.height * scale) / 2 - bounds.top * scale;
-    camera.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
     const selected = boundsOf(selectedSources.length ? selectedSources : [...sources]);
     const promptWidth = Math.min(480, width - 32);
     Object.assign(prompt.style, {
       width: `${promptWidth}px`,
       left: `${Math.max(16 + promptWidth / 2, Math.min(width - 16 - promptWidth / 2, x + (selected.left + selected.width / 2) * scale))}px`,
-      top: `${Math.max(16, y + selected.top * scale - prompt.offsetHeight - 8)}px`,
+      top: `${Math.max(16, Math.min(height - prompt.offsetHeight - 72, y + selected.top * scale - prompt.offsetHeight - 8))}px`,
     });
     positionIntentMenu();
   };
+
+  const viewport = window.createCanvasViewport({
+    board, stage, camera, onChange: positionPrompt,
+    getBounds: () => {
+      const content = [...sources];
+      if (stage.dataset.state === 'generating') content.push(stage.querySelector('.canvas-ai-loader'));
+      if (stage.dataset.state === 'done') content.push(stage.querySelector('.canvas-ai-result'));
+      return boundsOf(content);
+    },
+  });
+  const frameCanvas = () => viewport.frame();
 
   const setState = (state) => {
     stage.dataset.state = state;
@@ -188,7 +190,7 @@
       const image = source.querySelector('img');
       return { src: image.src, alt: image.alt };
     }) : []);
-    frameCanvas();
+    viewport.frame({ fit: state === 'generating' });
   };
 
   const syncInput = () => {
@@ -200,10 +202,7 @@
   const canvasObserver = new ResizeObserver(frameCanvas);
   canvasObserver.observe(board);
   sources.forEach((source) => canvasObserver.observe(source));
-  new MutationObserver(frameCanvas).observe(board, { attributes: true, attributeFilter: ['style'] });
   setState('idle');
-  // Establish the first view immediately; animate only user-driven reframing.
-  window.requestAnimationFrame(() => { stage.dataset.cameraReady = ''; });
 
   const promptObserver = new ResizeObserver(positionIntentMenu);
   promptObserver.observe(stage);
@@ -446,7 +445,15 @@
   };
 
   stage.addEventListener('pointerup', finishMarquee);
-  stage.addEventListener('pointercancel', finishMarquee);
+  const cancelMarquee = () => {
+    const pointerId = marqueeGesture?.pointerId;
+    marqueeGesture = null;
+    delete stage.dataset.marquee;
+    sources.forEach((source) => source.classList.remove('is-marquee-hit'));
+    if (pointerId !== undefined && stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+  };
+  stage.addEventListener('pointercancel', cancelMarquee);
+  stage.addEventListener('canvas-gesture-start', cancelMarquee);
 
   stage.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;

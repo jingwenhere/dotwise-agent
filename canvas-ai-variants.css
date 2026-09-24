@@ -29,42 +29,75 @@
 .canvas-ai-glass-pane {
   position: absolute;
   inset: 0;
-  background: rgb(245 247 247 / .35);
+  background: rgb(245 247 247 / .26);
   -webkit-backdrop-filter: blur(18px) saturate(.45);
   backdrop-filter: blur(18px) saturate(.45);
   pointer-events: none;
 }
 
-/* A neutral veil breathes over fixed blur; the outer image frame stays still. */
-.canvas-ai-glass-pane::after {
-  content: '';
+/* Uneven, neutral fog: soft organic silhouettes, not a color gradient.
+   Blur is fixed; only opacity and transforms breathe. The frame stays still. */
+.canvas-ai-glass-cloud {
   position: absolute;
-  inset: 0;
+  left: -25%;
+  top: -20%;
+  width: 110%;
+  height: 88%;
+  border-radius: 38% 62% 53% 47% / 54% 38% 62% 46%;
   background: rgb(245 247 247);
-  opacity: 0;
+  filter: blur(18px);
+  opacity: .32;
+  transform: translate(-3%, 2%) scale(.94);
+}
+
+.canvas-ai-glass-cloud:nth-child(2) {
+  left: 28%;
+  top: 42%;
+  width: 100%;
+  height: 84%;
+  border-radius: 64% 36% 44% 56% / 37% 57% 43% 63%;
+  background: rgb(232 237 236);
+}
+
+.canvas-ai-glass-cloud:nth-child(3) {
+  left: 14%;
+  top: 31%;
+  width: 62%;
+  height: 56%;
+  border-radius: 43% 57% 68% 32% / 58% 42% 61% 39%;
+  background: rgb(249 250 249);
 }
 
 .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-image {
   animation: canvas-ai-glass-breathe 3.2s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-pane::after {
+.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud {
   animation: canvas-ai-glass-mist 3.2s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
+.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud:nth-child(2) {
+  animation-delay: -.85s;
+  animation-direction: reverse;
+}
+
+.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud:nth-child(3) {
+  animation-delay: -1.6s;
+}
+
 .canvas-ai-stage[data-loading-effect="glass"][data-motion-paused="true"] .canvas-ai-glass-image,
-.canvas-ai-stage[data-loading-effect="glass"][data-motion-paused="true"] .canvas-ai-glass-pane::after {
+.canvas-ai-stage[data-loading-effect="glass"][data-motion-paused="true"] .canvas-ai-glass-cloud {
   animation-play-state: paused;
 }
 
 @keyframes canvas-ai-glass-breathe {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.035); opacity: .9; }
+  50% { transform: translate(1%, -1%) scale(1.065); opacity: .8; }
 }
 
 @keyframes canvas-ai-glass-mist {
-  0%, 100% { opacity: 0; }
-  50% { opacity: .18; }
+  0%, 100% { transform: translate(-3%, 2%) scale(.94); opacity: .2; }
+  50% { transform: translate(5%, -4%) scale(1.14); opacity: .74; }
 }
 
 /* E: a fixed square with an inward alpha fade. Only the color field rotates. */
@@ -103,7 +136,7 @@
 @media (prefers-reduced-motion: reduce) {
   .canvas-ai-glow-orbit { animation: none; }
   .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-image,
-  .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-pane::after { animation: none; }
+  .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud { animation: none; }
   .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-artwork-primary,
   .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-selection { transition: none; }
 }
