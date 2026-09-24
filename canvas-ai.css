@@ -520,34 +520,6 @@
   animation: canvas-b-vertical-sweep 2.8s linear infinite;
 }
 
-.canvas-ai-working-mark {
-  position: absolute;
-  z-index: 6;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.canvas-ai-working-mark .ai-working-logo {
-  width: 24px;
-  height: 24px;
-}
-
-/* Match Interaction A's completion status, without leaving a running canvas. */
-.canvas-ai-working-mark.is-done::after {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--blue);
-}
-
-.canvas-ai-stage[data-state="generating"] .canvas-ai-working-mark,
-.canvas-ai-stage[data-state="done"] .canvas-ai-working-mark { opacity: 1; }
-
 .canvas-ai-live {
   position: absolute;
   width: 1px;
@@ -582,11 +554,6 @@
   height: 199px;
 }
 
-.canvas-ai-stage[data-mode="single"] .canvas-ai-working-mark {
-  top: -25px;
-  left: 0;
-}
-
 /* Multi selection — matches the second Figma row. */
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork-primary {
   top: 0;
@@ -613,11 +580,6 @@
   left: 620px;
   width: 267px;
   height: 267px;
-}
-
-.canvas-ai-stage[data-mode="multi"] .canvas-ai-working-mark {
-  top: -25px;
-  left: 0;
 }
 
 @keyframes canvas-ai-edge-spin { to { transform: rotate(360deg); } }

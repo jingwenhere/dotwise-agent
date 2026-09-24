@@ -40,7 +40,6 @@
       ${loadingLayers}
     </div>
     <figure class="canvas-ai-result" aria-label="AI generated image"><img src="${asset(resultImage)}" alt="${resultAlt}" /></figure>
-    <span class="canvas-ai-working-mark" aria-hidden="true"></span>
     </div>
       <form class="canvas-ai-prompt prompt-box prompt-box-light" aria-label="Ask AI about selected images" data-node-id="2594:31668" inert>
         <div class="prompt-inline-field">
@@ -72,7 +71,6 @@
   const intentMenu = prompt.querySelector('.canvas-ai-intent-menu');
   const intentOptions = [...intentMenu.querySelectorAll('[data-intent]')];
   const live = stage.querySelector('.canvas-ai-live');
-  const workingMark = stage.querySelector('.canvas-ai-working-mark');
   const sources = stage.querySelectorAll('.canvas-ai-artwork');
   const selection = stage.querySelector('.canvas-ai-selection');
   const timers = new Set();
@@ -212,8 +210,6 @@
     closeIntentMenu();
     clearTimers();
     stopLibraryLoader();
-    workingMark.replaceChildren();
-    workingMark.classList.remove('is-done');
     board.removeAttribute('aria-busy');
     setState('prompt');
     input.value = '';
@@ -231,13 +227,6 @@
     clearTimers();
     stopLibraryLoader();
     input.blur();
-    // Reuse Interaction A's logo-to-line renderer, starting at the brand mark.
-    const workingLogo = document.createElement('canvas');
-    workingLogo.className = 'ai-working-logo';
-    workingLogo.dataset.workingLogo = '';
-    workingLogo.dataset.workingLogoStart = 'logo';
-    workingMark.classList.remove('is-done');
-    workingMark.replaceChildren(workingLogo);
     // Reveal the generated-content placeholder and deselect in the same frame.
     setState('generating');
     board.setAttribute('aria-busy', 'true');
@@ -247,8 +236,6 @@
       if (stage.dataset.state !== 'generating') return;
       stopLibraryLoader();
       setState('done');
-      workingMark.replaceChildren();
-      workingMark.classList.add('is-done');
       board.removeAttribute('aria-busy');
       announce('Image generation complete. Select a source painting to run the prototype again.');
     };
