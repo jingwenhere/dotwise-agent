@@ -384,10 +384,6 @@
 
   stage.addEventListener('pointerdown', (event) => {
     if (event.target.closest('.canvas-ai-artwork, .canvas-ai-prompt, .canvas-ai-intent-menu')) return;
-    if (mode !== 'multi') {
-      if (stage.dataset.state === 'prompt') clearSelection();
-      return;
-    }
     if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
     if (!['idle', 'prompt'].includes(stage.dataset.state)) return;
     clearSelection();
@@ -454,7 +450,5 @@
     }
   });
 
-  announce(mode === 'multi'
-    ? 'Drag across paintings to select multiple images, or choose one painting.'
-    : 'Select a painting to edit it with AI.');
+  announce('Drag across paintings to select them, or click a painting to select it.');
 })();

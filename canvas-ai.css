@@ -14,10 +14,7 @@
   inset: 0;
   overflow: hidden;
   user-select: none;
-}
-
-.canvas-ai-stage[data-mode="multi"] {
-  cursor: crosshair;
+  cursor: default;
   touch-action: none;
 }
 
@@ -57,10 +54,7 @@
 
 .canvas-ai-artwork {
   z-index: 2;
-  cursor: pointer;
-}
-
-.canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork {
+  cursor: default;
   touch-action: manipulation;
 }
 
