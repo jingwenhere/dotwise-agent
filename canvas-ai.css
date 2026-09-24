@@ -384,6 +384,36 @@
   }
 }
 
+/* The Canvas composer references selected artwork instead of the document chip. */
+[data-selection-mode] body.is-canvas-view .composer-attachment-bar > .file-chip {
+  display: none;
+}
+
+.canvas-ai-composer-images {
+  display: none;
+}
+
+body.is-canvas-view .canvas-ai-composer-images:not([hidden]) {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+body.is-canvas-view .composer.has-canvas-images .composer-content {
+  grid-template-rows: 48px minmax(0, 1fr);
+}
+
+.canvas-ai-composer-images img {
+  display: block;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 48px;
+  object-fit: cover;
+  border: .5px solid rgba(0, 0, 0, .09);
+  border-radius: 6px;
+}
+
 .canvas-ai-chat-attachments {
   display: flex;
   flex-wrap: wrap;

@@ -136,6 +136,8 @@
   let tooltipHideTimer = null;
   const canvasChatRuns = new Map();
   let canvasChatImages = [];
+  let canvasSelectionImages = [];
+  let canvasComposerImages = null;
 
   const reviewDefinitions = [
     {
@@ -655,6 +657,25 @@
     canvasChatRuns.forEach((timer) => window.clearTimeout(timer));
     canvasChatRuns.clear();
     canvasChatImages = [];
+    renderCanvasComposerImages();
+  }
+
+  function renderCanvasComposerImages() {
+    if (!canvasComposerImages) return;
+    const images = canvasSelectionImages.length ? canvasSelectionImages : canvasChatImages;
+    canvasComposerImages.replaceChildren(...images.map(({ src, alt }) => {
+      const image = document.createElement('img');
+      Object.assign(image, { src, alt, title: alt, width: 56, height: 48 });
+      return image;
+    }));
+    canvasComposerImages.hidden = !images.length;
+    canvasComposerImages.setAttribute('aria-label', `${images.length} referenced image${images.length === 1 ? '' : 's'}`);
+    chatComposer.classList.toggle('has-canvas-images', images.length > 0);
+  }
+
+  function setCanvasChatSelection(images) {
+    canvasSelectionImages = images.map(({ src, alt }) => ({ src, alt }));
+    renderCanvasComposerImages();
   }
 
   // Interaction C's Ask flow: user message, 2400ms Working preview, then reply.
@@ -743,10 +764,11 @@
     canvasChatRuns.set(article, timer);
   }
 
-  function sendCanvasChat(message, images = []) {
+  function sendCanvasChat(message, images = canvasSelectionImages) {
     message = message.trim();
     if (!message) return false;
     if (images.length) canvasChatImages = images.map(({ src, alt }) => ({ src, alt }));
+    renderCanvasComposerImages();
     if (canvasChatButton.getAttribute('aria-expanded') !== 'true') canvasChatButton.click();
     activateNewSession();
     newSessionConversation.classList.add('canvas-chat-c');
@@ -780,7 +802,12 @@
   }
 
   if (['single', 'multi'].includes(document.documentElement.dataset.selectionMode)) {
-    window.CanvasChat = { send: sendCanvasChat };
+    canvasComposerImages = document.createElement('div');
+    canvasComposerImages.className = 'canvas-ai-composer-images';
+    canvasComposerImages.setAttribute('role', 'group');
+    chatComposer.querySelector('.composer-attachment-bar').prepend(canvasComposerImages);
+    renderCanvasComposerImages();
+    window.CanvasChat = { send: sendCanvasChat, setSelection: setCanvasChatSelection };
   }
 
   function attachDocumentTaskState(task, target, state, label) {

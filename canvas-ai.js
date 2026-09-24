@@ -170,6 +170,10 @@
     stage.dataset.state = state;
     prompt.inert = state !== 'prompt';
     sources.forEach((source) => source.setAttribute('aria-pressed', String(state === 'prompt' && selectedSources.includes(source))));
+    window.CanvasChat?.setSelection(state === 'prompt' ? selectedSources.map((source) => {
+      const image = source.querySelector('img');
+      return { src: image.src, alt: image.alt };
+    }) : []);
     frameCanvas();
   };
 
