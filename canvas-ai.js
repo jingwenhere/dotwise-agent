@@ -81,6 +81,20 @@
   let selectedSources = [];
   let marqueeGesture = null;
 
+  if (loadingEffect === 'glass') {
+    let loaderInView = false;
+    const syncGlassMotion = () => {
+      stage.dataset.motionPaused = String(document.hidden || !loaderInView);
+    };
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      loaderInView = entry.isIntersecting;
+      syncGlassMotion();
+    });
+    visibilityObserver.observe(stage.querySelector('.canvas-ai-loader'));
+    document.addEventListener('visibilitychange', syncGlassMotion);
+    syncGlassMotion();
+  }
+
   const stopLibraryLoader = () => {
     disposeLibraryLoader?.();
     disposeLibraryLoader = null;
