@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "build:canvas-loaders": "node scripts/build-canvas-loaders.mjs"
+    "build:canvas-loaders": "node scripts/build-canvas-loaders.mjs",
+    "test:canvas": "node scripts/test-canvas-scene.cjs"
   },
   "dependencies": {
     "cuelume": "^0.2.2",

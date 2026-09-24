@@ -677,8 +677,8 @@
     };
     canvasComposerImages.replaceChildren(
       createReferenceChip('assets/figma/canvas-a/presentation.svg', 'Canvas'),
-      ...images.map(({ src, alt }) => {
-        const name = decodeURIComponent(new URL(src, document.baseURI).pathname.split('/').pop()) || alt;
+      ...images.map(({ src, alt, name: imageName }) => {
+        const name = imageName || decodeURIComponent(new URL(src, document.baseURI).pathname.split('/').pop()) || alt;
         return createReferenceChip(src, name, true);
       }),
     );
@@ -686,7 +686,7 @@
   }
 
   function setCanvasChatSelection(images) {
-    canvasSelectionImages = images.map(({ src, alt }) => ({ src, alt }));
+    canvasSelectionImages = images.map(({ src, alt, name, id }) => ({ src, alt, name, id }));
     renderCanvasComposerImages();
   }
 
@@ -698,16 +698,20 @@
       return 'Try this direction: an impressionist landscape with soft natural light, loose brushwork, muted blue-green tones, and a quiet, spacious composition. Keep the texture painterly and the edges soft.';
     }
     if (/similar|recommend|search|相似|推荐/.test(lower)) {
-      const references = 'For a similar direction, explore Monet\'s winter landscapes and Sisley\'s snow scenes. Look for subdued light, delicate blue-grey shadows, and loose, visible brushwork.';
-      return images.length > 1
-        ? `${references}\n\nTo bring in the water-lily reference, add softer green reflections and a more open, abstract composition.`
-        : references;
+      return images.length
+        ? `For a similar direction to your ${images.length} selected image${images.length === 1 ? '' : 's'}, keep the references\' palette and brushwork, then vary the composition or lighting. Select them on the canvas and choose Generate to explore another variation.`
+        : 'Select an image on the canvas so there is a visual reference for the next variation.';
     }
-    if (images.length > 1) {
-      return 'The two paintings share soft light and visible brushwork. The water-lily painting feels fluid and open, while the winter landscape uses clearer shapes and quieter, cooler tones.\n\nA combined direction could keep the winter scene\'s structure and borrow the water-lily painting\'s softened edges and reflected colour.';
-    }
-    return images.length
-      ? 'The selected winter landscape has a quiet atmosphere, soft snow tones, and loose brushwork. Darker trees give the composition structure without overpowering the light.\n\nFor a related painting, keep the palette restrained and vary the brushwork and lighting rather than adding more detail.'
+    const descriptions = images.map(({ src, name, alt }) => {
+      const description = src.includes('water-lilies')
+        ? 'Soft reflections and pastel colour give this painting a fluid, open composition.'
+        : src.includes('blue-abstract')
+          ? 'Blue tones and abstract shapes create a layered, rhythmic composition.'
+          : 'Soft snow tones and darker trees give this winter landscape a quiet atmosphere and a clear structure.';
+      return `${name || alt}: ${description}`;
+    });
+    return descriptions.length
+      ? `${descriptions.join('\n\n')}\n\nYou can select any of these images on the canvas to explore another variation.`
       : 'I can help compare painting styles, discuss colour and composition, or refine a prompt for your next image.';
   }
 
@@ -776,10 +780,10 @@
     canvasChatRuns.set(article, timer);
   }
 
-  function sendCanvasChat(message, images = canvasSelectionImages) {
+  function sendCanvasChat(message, images = canvasSelectionImages.length ? canvasSelectionImages : canvasChatImages) {
     message = message.trim();
     if (!message) return false;
-    if (images.length) canvasChatImages = images.map(({ src, alt }) => ({ src, alt }));
+    if (images.length) canvasChatImages = images.map(({ src, alt, name, id }) => ({ src, alt, name, id }));
     renderCanvasComposerImages();
     if (canvasChatButton.getAttribute('aria-expanded') !== 'true') canvasChatButton.click();
     activateNewSession();

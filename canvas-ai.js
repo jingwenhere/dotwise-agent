@@ -5,6 +5,7 @@
   const requestedEffect = document.documentElement.dataset.loadingEffect;
   const loadingEffect = ['glass', 'glow', 'composer', 'pixels'].includes(requestedEffect) ? requestedEffect : 'combined';
   const usesLibraryLoader = ['composer', 'pixels'].includes(loadingEffect);
+  const scene = new window.CanvasScene.Scene(mode, loadingEffect);
 
   const asset = (name) => `assets/figma/canvas-ai/${name}`;
   const secondaryArtwork = mode === 'multi'
@@ -12,8 +13,6 @@
     : '';
   const sourceImage = mode === 'single' ? 'winter-landscape.png' : 'water-lilies.png';
   const sourceAlt = mode === 'single' ? 'Snowy winter landscape painting' : 'Pastel water lilies painting';
-  const resultImage = mode === 'single' ? 'water-lilies.png' : 'blue-abstract.png';
-  const resultAlt = mode === 'single' ? 'Generated pastel water lilies painting' : 'Generated blue abstract painting';
   // Keep each experiment's layers separate so glass and glow cannot bleed together.
   const loadingLayers = usesLibraryLoader
     ? '<div class="canvas-ai-library-mount"></div>'
@@ -36,10 +35,6 @@
     <div class="canvas-ai-selection">
       <span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span>
     </div>
-    <div class="canvas-ai-loader" aria-hidden="true">
-      ${loadingLayers}
-    </div>
-    <figure class="canvas-ai-result" aria-label="AI generated image"><img src="${asset(resultImage)}" alt="${resultAlt}" /></figure>
     </div>
       <div class="canvas-ai-marquee" aria-hidden="true"></div>
       <form class="canvas-ai-prompt prompt-box prompt-box-light" aria-label="Ask AI about selected images" data-node-id="2594:31668" inert>
@@ -72,32 +67,29 @@
   const intentMenu = prompt.querySelector('.canvas-ai-intent-menu');
   const intentOptions = [...intentMenu.querySelectorAll('[data-intent]')];
   const live = stage.querySelector('.canvas-ai-live');
-  const sources = stage.querySelectorAll('.canvas-ai-artwork');
+  const sources = [...stage.querySelectorAll('.canvas-ai-artwork')];
+  sources.forEach((source, index) => { source.dataset.imageId = `source-${index + 1}`; });
   const selection = stage.querySelector('.canvas-ai-selection');
   const marquee = stage.querySelector('.canvas-ai-marquee');
-  const timers = new Set();
-  let disposeLibraryLoader = null;
+  const jobs = new Map();
   let intent = 'generate';
   let selectedSources = [];
   let marqueeGesture = null;
 
-  if (loadingEffect === 'glass') {
-    let loaderInView = false;
-    const syncGlassMotion = () => {
-      stage.dataset.motionPaused = String(document.hidden || !loaderInView);
-    };
-    const visibilityObserver = new IntersectionObserver(([entry]) => {
-      loaderInView = entry.isIntersecting;
-      syncGlassMotion();
+  const syncMotion = () => {
+    jobs.forEach(({ element }) => {
+      element.dataset.motionPaused = String(document.hidden || element.dataset.inView === 'false');
     });
-    visibilityObserver.observe(stage.querySelector('.canvas-ai-loader'));
-    document.addEventListener('visibilitychange', syncGlassMotion);
-    syncGlassMotion();
-  }
+  };
+  const visibilityObserver = new IntersectionObserver((entries) => {
+    entries.forEach(({ target, isIntersecting }) => { target.dataset.inView = String(isIntersecting); });
+    syncMotion();
+  });
+  document.addEventListener('visibilitychange', syncMotion);
 
-  const stopLibraryLoader = () => {
-    disposeLibraryLoader?.();
-    disposeLibraryLoader = null;
+  const imageReference = (source) => {
+    const node = scene.nodes.get(source.dataset.imageId);
+    return { id: node.id, name: node.name, src: source.querySelector('img').src, alt: node.alt };
   };
 
   const closeIntentMenu = (restoreFocus = false) => {
@@ -174,23 +166,22 @@
   const viewport = window.createCanvasViewport({
     board, stage, camera, onChange: positionPrompt,
     getBounds: () => {
-      const content = [...sources];
-      if (stage.dataset.state === 'generating') content.push(stage.querySelector('.canvas-ai-loader'));
-      if (stage.dataset.state === 'done') content.push(stage.querySelector('.canvas-ai-result'));
-      return boundsOf(content);
+      const { x, y, width, height } = scene.bounds();
+      return { left: x, top: y, width, height };
     },
   });
   const frameCanvas = () => viewport.frame();
 
-  const setState = (state) => {
+  const setState = () => {
+    const generating = [...scene.nodes.values()].some((node) => node.status === 'generating');
+    const state = selectedSources.length ? 'prompt' : generating ? 'generating' : 'idle';
     stage.dataset.state = state;
+    stage.dataset.generatingCount = String([...scene.nodes.values()].filter((node) => node.status === 'generating').length);
     prompt.inert = state !== 'prompt';
     sources.forEach((source) => source.setAttribute('aria-pressed', String(state === 'prompt' && selectedSources.includes(source))));
-    window.CanvasChat?.setSelection(state === 'prompt' ? selectedSources.map((source) => {
-      const image = source.querySelector('img');
-      return { src: image.src, alt: image.alt };
-    }) : []);
-    viewport.frame({ fit: state === 'generating' });
+    window.CanvasChat?.setSelection(selectedSources.map(imageReference));
+    // Only the pending card is busy; the rest of the canvas remains interactive.
+    viewport.frame();
   };
 
   const syncInput = () => {
@@ -202,7 +193,7 @@
   const canvasObserver = new ResizeObserver(frameCanvas);
   canvasObserver.observe(board);
   sources.forEach((source) => canvasObserver.observe(source));
-  setState('idle');
+  setState();
 
   const promptObserver = new ResizeObserver(positionIntentMenu);
   promptObserver.observe(stage);
@@ -210,31 +201,17 @@
   promptObserver.observe(selection);
   window.addEventListener('resize', positionIntentMenu);
 
-  const schedule = (callback, delay) => {
-    const timer = window.setTimeout(() => {
-      timers.delete(timer);
-      callback();
-    }, delay);
-    timers.add(timer);
-  };
-
-  const clearTimers = () => {
-    timers.forEach((timer) => window.clearTimeout(timer));
-    timers.clear();
-  };
-
   const announce = (message) => {
     live.textContent = '';
     window.requestAnimationFrame(() => { live.textContent = message; });
   };
 
-  const selectSource = (source) => {
+  const selectSource = (source, additive = false) => {
     closeIntentMenu();
-    clearTimers();
-    stopLibraryLoader();
-    board.removeAttribute('aria-busy');
-    selectedSources = [source];
-    setState('prompt');
+    selectedSources = additive
+      ? selectedSources.includes(source) ? selectedSources.filter((item) => item !== source) : [...selectedSources, source]
+      : [source];
+    setState();
     input.value = '';
     syncInput();
     announce('Painting selected. Edit selection with AI.');
@@ -243,45 +220,160 @@
     }
   };
 
-  const startGeneration = () => {
-    if (stage.dataset.state !== 'prompt' || !input.value.trim()) return;
-    closeIntentMenu();
-    submit.disabled = true;
-    clearTimers();
-    stopLibraryLoader();
-    input.blur();
-    // Reveal the generated-content placeholder and deselect in the same frame.
-    setState('generating');
-    board.setAttribute('aria-busy', 'true');
-    announce('Generating image. Selection highlight removed.');
+  const place = (element, node, loading = false) => Object.assign(element.style, {
+    left: `${node.x}px`, top: `${node.y}px`,
+    width: `${loading ? node.loadingWidth : node.width}px`,
+    height: `${loading ? node.loadingHeight : node.height}px`,
+  });
 
-    const finishGeneration = () => {
-      if (stage.dataset.state !== 'generating') return;
-      stopLibraryLoader();
-      setState('done');
-      board.removeAttribute('aria-busy');
-      announce('Image generation complete. Select a source painting to run the prototype again.');
+  const stopJob = (job) => {
+    job.runToken = null;
+    clearTimeout(job.timer);
+    clearTimeout(job.watchdog);
+    job.dispose?.();
+    job.dispose = null;
+    if (job.image) job.image.onload = job.image.onerror = null;
+  };
+
+  const removeJob = (job) => {
+    stopJob(job);
+    visibilityObserver.unobserve(job.element);
+    job.element.remove();
+    jobs.delete(job.id);
+  };
+
+  const cancelJob = (job) => {
+    const restoreFocus = job.element.contains(document.activeElement);
+    scene.cancel(job.id);
+    removeJob(job);
+    setState();
+    if (restoreFocus) sources[0].focus({ preventScroll: true });
+    announce('Generation cancelled. Existing images are unchanged.');
+  };
+
+  const jobActions = (job, failed = false) => {
+    const actions = document.createElement('div');
+    actions.className = 'canvas-ai-job-actions';
+    if (failed) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.textContent = 'Retry';
+      retry.addEventListener('click', () => {
+        if (scene.retry(job.id)) { runJob(job); setState(); }
+      });
+      actions.append(retry);
+    }
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = failed ? 'Remove' : 'Cancel';
+    cancel.setAttribute('aria-label', `${failed ? 'Remove failed' : 'Cancel'} generation ${job.id}`);
+    cancel.addEventListener('click', () => cancelJob(job));
+    actions.append(cancel);
+    return actions;
+  };
+
+  const runJob = (job) => {
+    const restoreFocus = job.element.contains(document.activeElement);
+    stopJob(job);
+    const node = scene.nodes.get(job.id);
+    const token = {};
+    job.runToken = token;
+    job.element.dataset.state = 'generating';
+    job.element.setAttribute('aria-label', `Generating ${node.name}`);
+    job.element.setAttribute('aria-busy', 'true');
+    job.element.innerHTML = loadingLayers;
+    const glassImage = job.element.querySelector('.canvas-ai-glass-image');
+    if (glassImage) glassImage.src = asset(scene.nodes.get(node.parentIds[0]).file);
+    job.element.append(jobActions(job));
+    if (restoreFocus) job.element.querySelector('button').focus({ preventScroll: true });
+    let loaded = false;
+    let animationFinished = false;
+    const current = () => job.runToken === token && scene.nodes.get(job.id)?.status === 'generating';
+    const fail = () => {
+      if (!current()) return;
+      const restoreFocus = job.element.contains(document.activeElement);
+      stopJob(job);
+      scene.fail(job.id);
+      job.element.dataset.state = 'error';
+      job.element.setAttribute('aria-label', `Could not load ${node.name}`);
+      job.element.removeAttribute('aria-busy');
+      const message = document.createElement('p');
+      message.textContent = 'Image could not load';
+      job.element.replaceChildren(message, jobActions(job, true));
+      setState();
+      if (restoreFocus) job.element.querySelector('button').focus({ preventScroll: true });
+      announce('Image could not load. Retry or remove this generation.');
     };
+    const complete = () => {
+      if (!current() || !loaded || !animationFinished) return;
+      const restoreFocus = job.element.contains(document.activeElement);
+      const result = scene.complete(job.id);
+      const artwork = document.createElement('button');
+      artwork.type = 'button';
+      artwork.className = 'canvas-ai-artwork canvas-ai-generated';
+      artwork.dataset.imageId = result.id;
+      artwork.setAttribute('aria-label', `Select ${result.name}`);
+      artwork.title = result.name;
+      job.image.alt = result.alt;
+      artwork.append(job.image);
+      place(artwork, result);
+      camera.append(artwork);
+      sources.push(artwork);
+      canvasObserver.observe(artwork);
+      removeJob(job);
+      // Completion never steals the current selection, prompt draft, or chat focus.
+      setState();
+      if (restoreFocus) artwork.focus({ preventScroll: true });
+      announce(`${result.name} ready. Select any image to continue generating.`);
+    };
+    job.image = new Image();
+    job.image.draggable = false;
+    job.image.onload = () => { loaded = true; complete(); };
+    job.image.onerror = fail;
+    job.image.src = asset(node.file);
+    job.watchdog = setTimeout(fail, 20000);
+    const animationComplete = () => { animationFinished = true; complete(); };
     if (usesLibraryLoader && window.CanvasLibraryLoaders) {
-      disposeLibraryLoader = window.CanvasLibraryLoaders.mount(
-        stage.querySelector('.canvas-ai-library-mount'),
-        { effect: loadingEffect, imageUrl: asset(resultImage), onComplete: finishGeneration },
-      );
+      try {
+        job.dispose = window.CanvasLibraryLoaders.mount(job.element.querySelector('.canvas-ai-library-mount'), {
+          effect: loadingEffect, imageUrl: asset(node.file), onComplete: animationComplete,
+        });
+      } catch { fail(); }
     } else {
-      if (usesLibraryLoader) {
-        stage.querySelector('.canvas-ai-library-mount').textContent = 'Animation unavailable';
-        announce('Animation unavailable. The generated image will appear shortly.');
-      }
-      schedule(finishGeneration, 4100);
+      if (usesLibraryLoader) job.element.querySelector('.canvas-ai-library-mount').textContent = 'Preparing image…';
+      job.timer = setTimeout(animationComplete, 4100);
     }
   };
 
-  window.addEventListener('pagehide', stopLibraryLoader);
+  const startGeneration = () => {
+    if (!selectedSources.length || !input.value.trim()) return;
+    const node = scene.createJob(selectedSources.map((source) => source.dataset.imageId), input.value);
+    const element = document.createElement('div');
+    element.className = 'canvas-ai-loader';
+    element.dataset.imageId = node.id;
+    element.setAttribute('role', 'group');
+    element.setAttribute('aria-label', `Generating ${node.name}`);
+    place(element, node, true);
+    const job = { id: node.id, element };
+    jobs.set(node.id, job);
+    camera.append(element);
+    visibilityObserver.observe(element);
+    runJob(job);
+    closeIntentMenu();
+    selectedSources = [];
+    input.value = '';
+    input.blur();
+    syncInput();
+    setState();
+    viewport.frame({ fit: true });
+    announce('Generating image. You can continue selecting other images.');
+  };
+
+  window.addEventListener('pagehide', () => jobs.forEach(stopJob));
   window.addEventListener('pageshow', (event) => {
-    // BFCache restores the DOM, but the pagehide cleanup already stopped React.
-    if (event.persisted && usesLibraryLoader && stage.dataset.state === 'generating') {
-      selectSource(sources[0]);
-    }
+    if (event.persisted) jobs.forEach((job) => {
+      if (scene.nodes.get(job.id)?.status === 'generating') runJob(job);
+    });
   });
 
   const sendToChat = () => {
@@ -296,10 +388,7 @@
     }
 
     closeIntentMenu();
-    const images = selectedSources.map((source) => {
-      const image = source.querySelector('img');
-      return { src: image.src, alt: image.alt };
-    });
+    const images = selectedSources.map(imageReference);
     // Send directly to the C-style conversation without overwriting a chat draft.
     if (!window.CanvasChat.send(message, images)) {
       announce('The prompt could not be sent. Your prompt has been kept.');
@@ -307,7 +396,7 @@
     }
 
     selectedSources = [];
-    setState('idle');
+    setState();
     input.value = '';
     syncInput();
     window.requestAnimationFrame(() => {
@@ -361,14 +450,18 @@
     if (intent === 'chat') sendToChat();
     else startGeneration();
   });
-  sources.forEach((source) => source.addEventListener('click', () => selectSource(source)));
+  camera.addEventListener('click', (event) => {
+    const source = event.target.closest('.canvas-ai-artwork');
+    if (source) selectSource(source, event.shiftKey);
+  });
+  camera.addEventListener('dragstart', (event) => event.preventDefault());
 
   const clearSelection = () => {
     selectedSources = [];
     sources.forEach((source) => source.classList.remove('is-marquee-hit'));
     closeIntentMenu();
     input.blur();
-    setState('idle');
+    setState();
   };
 
   const localPointer = (event) => {
@@ -396,9 +489,8 @@
   });
 
   stage.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('.canvas-ai-artwork, .canvas-ai-prompt, .canvas-ai-intent-menu')) return;
+    if (event.target.closest('.canvas-ai-artwork, .canvas-ai-loader, .canvas-ai-prompt, .canvas-ai-intent-menu')) return;
     if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
-    if (!['idle', 'prompt'].includes(stage.dataset.state)) return;
     clearSelection();
     const start = localPointer(event);
     marqueeGesture = { pointerId: event.pointerId, start, moved: false, hits: [] };
@@ -435,7 +527,7 @@
       return;
     }
     selectedSources = hits;
-    setState('prompt');
+    setState();
     input.value = '';
     syncInput();
     announce(`${hits.length} ${hits.length === 1 ? 'painting' : 'paintings'} selected. Edit selection with AI.`);

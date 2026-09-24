@@ -69,25 +69,25 @@
   background: rgb(249 250 249);
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-image {
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-image {
   animation: canvas-ai-glass-breathe 3.2s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud {
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-cloud {
   animation: canvas-ai-glass-mist 3.2s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud:nth-child(2) {
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-cloud:nth-child(2) {
   animation-delay: -.85s;
   animation-direction: reverse;
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud:nth-child(3) {
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-cloud:nth-child(3) {
   animation-delay: -1.6s;
 }
 
-.canvas-ai-stage[data-loading-effect="glass"][data-motion-paused="true"] .canvas-ai-glass-image,
-.canvas-ai-stage[data-loading-effect="glass"][data-motion-paused="true"] .canvas-ai-glass-cloud {
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-motion-paused="true"] .canvas-ai-glass-image,
+.canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-motion-paused="true"] .canvas-ai-glass-cloud {
   animation-play-state: paused;
 }
 
@@ -136,8 +136,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .canvas-ai-glow-orbit { animation: none; }
-  .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-image,
-  .canvas-ai-stage[data-loading-effect="glass"][data-state="generating"] .canvas-ai-glass-cloud { animation: none; }
+  .canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-image,
+  .canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader[data-state="generating"] .canvas-ai-glass-cloud { animation: none; }
   .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-artwork-primary,
   .canvas-ai-stage:is([data-loading-effect="glass"], [data-loading-effect="glow"]) .canvas-ai-selection { transition: none; }
 }
