@@ -43,14 +43,80 @@
 .canvas-ai-stage[data-navigation="hand"] .canvas-ai-artwork { cursor: grab; }
 .canvas-ai-stage[data-navigation="panning"],
 .canvas-ai-stage[data-navigation="panning"] .canvas-ai-artwork { cursor: grabbing; }
-[data-selection-mode] .canvas-view-controls { bottom: 68px; }
-.canvas-navigation-button { font-size: 20px; }
-.canvas-navigation-button[aria-pressed="true"] { background: #202020; color: white; }
+/* Figma 2583:13542 / 2583:13588: quiet view controls and a centered tool dock. */
+[data-selection-mode] .canvas-board { container-type: inline-size; }
+[data-selection-mode] .canvas-view-controls {
+  left: 8px;
+  bottom: 8px;
+  height: 40px;
+  padding: 6px;
+  gap: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+[data-selection-mode] .canvas-view-button { width: 28px; height: 28px; }
+[data-selection-mode] .canvas-view-button + .canvas-view-button { margin-left: 2px; }
+[data-selection-mode] .canvas-view-button img { width: 16px; height: 16px; }
+[data-selection-mode] .canvas-view-divider { height: 10px; margin: 0 6px 0 9px; background: rgba(0, 0, 0, .09); }
+[data-selection-mode] .canvas-zoom-button {
+  width: 52px;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+[data-selection-mode] .canvas-toolbox {
+  bottom: 8px;
+  gap: 4px;
+  padding: 6px;
+  min-height: 48px;
+  border-color: rgba(0, 0, 0, .12);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, .04);
+}
+.canvas-tool-group { display: flex; align-items: center; gap: 1px; flex: 0 0 auto; }
+[data-selection-mode] .canvas-tool { border-radius: 8px; }
+[data-selection-mode] .canvas-tool.is-active { background: #000; }
+[data-selection-mode] .canvas-tool-chevron { height: 36px; }
+[data-selection-mode] .canvas-tool-chevron img { width: 16px; height: 16px; max-width: none; flex-shrink: 0; }
+
+/* Zoom/pan stays available without adding controls to the Figma resting state. */
+.canvas-navigation-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  width: 184px;
+  border: 1px solid rgba(0, 0, 0, .09);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
+}
+.canvas-navigation-menu::backdrop { background: transparent; }
+.canvas-navigation-button {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  background: transparent;
+  color: #222;
+  cursor: pointer;
+}
+.canvas-navigation-button:hover,
+.canvas-navigation-button[aria-checked="true"] { background: rgba(0, 0, 0, .04); }
+.canvas-navigation-button:focus-visible { outline: 2px solid #3e63dd; outline-offset: -2px; }
 .canvas-navigation-button:disabled { opacity: .35; cursor: default; }
-.canvas-zoom-button { font-variant-numeric: tabular-nums; }
-@media (pointer: coarse) {
-  [data-selection-mode] .canvas-view-controls { height: 52px; }
-  .canvas-navigation-button, [data-selection-mode] .canvas-zoom-button { min-width: 44px; min-height: 44px; }
+@container (max-width: 640px) {
+  [data-selection-mode] .canvas-view-controls { bottom: 64px; }
 }
 
 .canvas-ai-stage button,

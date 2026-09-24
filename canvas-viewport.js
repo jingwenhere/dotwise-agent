@@ -24,31 +24,78 @@ window.createCanvasViewport = ({ board, stage, camera, getBounds, onChange }) =>
   stage.tabIndex = 0;
   stage.setAttribute('aria-label', 'Canvas. Scroll to pan, pinch or Control scroll to zoom. Hold Space and drag to pan.');
   board.setAttribute('aria-label', 'Interactive image canvas');
-  zoomButton.title = 'Fit all images (Shift+1)';
+  zoomButton.title = 'Zoom and pan options';
+  zoomButton.setAttribute('aria-haspopup', 'menu');
+  zoomButton.setAttribute('aria-expanded', 'false');
+  zoomButton.setAttribute('aria-controls', 'canvasNavigationMenu');
+  const menu = document.createElement('div');
+  menu.id = 'canvasNavigationMenu';
+  menu.className = 'canvas-navigation-menu';
+  menu.setAttribute('popover', 'auto');
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'Canvas navigation');
+  board.append(menu);
+  const closeMenu = (restoreFocus = true) => {
+    if (menu.matches(':popover-open')) menu.hidePopover();
+    if (restoreFocus) zoomButton.focus({ preventScroll: true });
+  };
+  const positionMenu = () => {
+    if (!menu.matches(':popover-open')) return;
+    const rect = zoomButton.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${Math.max(8, rect.top - menu.offsetHeight - 8)}px`;
+  };
 
-  const makeControl = (label, content, action) => {
+  const makeControl = (label, action, isHand = false) => {
     const button = document.createElement('button');
-    button.className = 'canvas-view-button canvas-navigation-button';
+    button.className = 'canvas-navigation-button';
     button.type = 'button';
     button.setAttribute('aria-label', label);
-    button.title = label;
-    button.innerHTML = content;
-    button.addEventListener('click', action);
+    button.textContent = label;
+    button.setAttribute('role', isHand ? 'menuitemcheckbox' : 'menuitem');
+    button.tabIndex = -1;
+    button.addEventListener('click', () => { action(); closeMenu(!isHand); });
+    menu.append(button);
     return button;
   };
-  const minus = makeControl('Zoom out', '−', () => zoomTo(view.scale / 1.2));
-  const plus = makeControl('Zoom in', '+', () => zoomTo(view.scale * 1.2));
-  const hand = makeControl('Hand tool — drag to pan (H)', '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 4-2 6-6 6h-1c-2 0-3-1-4-2l-5-6a1.5 1.5 0 0 1 2-2l2 1Z"/></svg>', () => setHand(!handTool));
-  hand.setAttribute('aria-pressed', 'false');
-  zoomButton.before(minus);
-  zoomButton.after(plus, hand);
+  const plus = makeControl('Zoom in', () => zoomTo(view.scale * 1.2));
+  const minus = makeControl('Zoom out', () => zoomTo(view.scale / 1.2));
+  makeControl('Zoom to 100%', () => zoomTo(1));
+  makeControl('Fit all images', () => fit());
+  const hand = makeControl('Hand tool (H)', () => setHand(!handTool), true);
+  hand.setAttribute('aria-checked', 'false');
+  const toggleMenu = () => {
+    if (menu.matches(':popover-open')) { closeMenu(); return; }
+    menu.showPopover();
+    positionMenu();
+    menu.querySelector('button:not(:disabled)').focus({ preventScroll: true });
+  };
+  menu.addEventListener('toggle', () => zoomButton.setAttribute('aria-expanded', String(menu.matches(':popover-open'))));
+  menu.addEventListener('keydown', (event) => {
+    const items = [...menu.querySelectorAll('button:not(:disabled)')];
+    const index = items.indexOf(document.activeElement);
+    let next;
+    if (event.key === 'ArrowDown') next = (index + 1) % items.length;
+    else if (event.key === 'ArrowUp') next = (index - 1 + items.length) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else if (event.key === 'Escape' || event.key === 'Tab') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMenu();
+      return;
+    } else return;
+    event.preventDefault();
+    items[next].focus({ preventScroll: true });
+  });
+  window.addEventListener('resize', positionMenu);
 
   const syncCursor = () => {
     stage.dataset.navigation = pan || pinch ? 'panning' : handTool || spaceDown ? 'hand' : 'select';
   };
   const setHand = (active) => {
     handTool = active;
-    hand.setAttribute('aria-pressed', String(active));
+    hand.setAttribute('aria-checked', String(active));
     syncCursor();
     if (active) stage.focus({ preventScroll: true });
   };
@@ -67,9 +114,10 @@ window.createCanvasViewport = ({ board, stage, camera, getBounds, onChange }) =>
     });
     const percent = Math.round(view.scale * 100);
     zoomButton.textContent = `${percent}%`;
-    zoomButton.setAttribute('aria-label', `Canvas zoom ${percent} percent. Fit all images`);
+    zoomButton.setAttribute('aria-label', `Canvas zoom ${percent} percent. Open zoom options`);
     minus.disabled = view.scale <= .1;
     plus.disabled = view.scale >= 4;
+    positionMenu();
     onChange(view);
   };
   const requestRender = () => { if (!renderFrame) renderFrame = requestAnimationFrame(render); };
@@ -203,6 +251,8 @@ window.createCanvasViewport = ({ board, stage, camera, getBounds, onChange }) =>
 
   document.addEventListener('keydown', (event) => {
     if (!document.body.classList.contains('is-canvas-view') || editable(event.target)) return;
+    // Space/Enter on navigation controls retain their native button behavior.
+    if (menu.contains(event.target) || event.target === zoomButton) return;
     if (event.code === 'Space' && !event.metaKey && !event.ctrlKey) {
       event.preventDefault();
       spaceDown = true;
@@ -238,7 +288,7 @@ window.createCanvasViewport = ({ board, stage, camera, getBounds, onChange }) =>
     delete stage.dataset.cameraAnimating;
     resetGestures();
   });
-  const api = { frame, fit, zoomTo };
+  const api = { frame, fit, zoomTo, toggleMenu };
   window.CanvasViewport = api;
   return api;
 };

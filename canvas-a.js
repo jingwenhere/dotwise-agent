@@ -2742,7 +2742,7 @@
   });
   canvasZoomButton.addEventListener('click', () => {
     if (window.CanvasViewport) {
-      window.CanvasViewport.fit();
+      window.CanvasViewport.toggleMenu();
       return;
     }
     const zoomValues = [100, 125, 75];

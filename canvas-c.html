@@ -7,7 +7,7 @@
   <title>Dotwise — Canvas C</title>
   <link rel="icon" href="assets/figma/agent-document.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="canvas-a.css?v=20260921-a7" />
-  <link rel="stylesheet" href="canvas-ai.css?v=20260924-chain1" />
+  <link rel="stylesheet" href="canvas-ai.css?v=20260924-toolbar1" />
   <link rel="stylesheet" href="canvas-ai-variants.css?v=20260924-chain1" />
 </head>
 <body class="is-canvas-view">
@@ -94,14 +94,20 @@
             <button class="canvas-zoom-button" id="canvasZoomButton" type="button" aria-label="Canvas zoom 100 percent">100%</button>
           </div>
           <div class="canvas-toolbox" role="toolbar" aria-label="Canvas tools">
+            <div class="canvas-tool-group">
             <button class="canvas-tool is-active" type="button" aria-label="Select tool" aria-pressed="true" data-canvas-tool="Select"><img src="assets/figma/canvas-a/cursor.svg" alt="" /></button>
             <button class="canvas-tool-chevron" type="button" aria-label="Select tool options"><img src="assets/figma/canvas-a/chevron-down.svg" alt="" /></button>
+            </div>
+            <div class="canvas-tool-group">
             <button class="canvas-tool" type="button" aria-label="Square tool" aria-pressed="false" data-canvas-tool="Square"><img src="assets/figma/canvas-a/square.svg" alt="" /></button>
             <button class="canvas-tool-chevron" type="button" aria-label="Square tool options"><img src="assets/figma/canvas-a/chevron-down.svg" alt="" /></button>
+            </div>
+            <div class="canvas-tool-group">
             <button class="canvas-tool" type="button" aria-label="Draw tool" aria-pressed="false" data-canvas-tool="Draw"><img src="assets/figma/canvas-a/edit.svg" alt="" /></button>
             <button class="canvas-tool-chevron" type="button" aria-label="Draw tool options"><img src="assets/figma/canvas-a/chevron-down.svg" alt="" /></button>
+            </div>
             <button class="canvas-tool" type="button" aria-label="Text tool" aria-pressed="false" data-canvas-tool="Text"><img src="assets/figma/canvas-a/type.svg" alt="" /></button>
-            <button class="canvas-tool" type="button" aria-label="Sticky note tool" aria-pressed="false" data-canvas-tool="Sticky note"><img src="assets/figma/canvas-a/sticky-note.svg" alt="" /></button>
+            <button class="canvas-tool" type="button" aria-label="Sticky note tool" aria-pressed="false" data-canvas-tool="Sticky note"><img src="assets/figma/canvas-a/sticky-note-toolbar.svg" alt="" /></button>
             <button class="canvas-tool" type="button" aria-label="Frame tool" aria-pressed="false" data-canvas-tool="Frame"><img src="assets/figma/canvas-a/frame.svg" alt="" /></button>
             <button class="canvas-tool" type="button" aria-label="Shapes tool" aria-pressed="false" data-canvas-tool="Shapes"><img src="assets/figma/canvas-a/shapes.svg" alt="" /></button>
           </div>
@@ -370,8 +376,8 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="canvas-a.js?v=20260924-chain1"></script>
-  <script src="canvas-viewport.js?v=20260924-camera1"></script>
+  <script src="canvas-a.js?v=20260924-toolbar1"></script>
+  <script src="canvas-viewport.js?v=20260924-toolbar1"></script>
   <script src="canvas-scene.js?v=20260924-chain1"></script>
   <script src="canvas-ai.js?v=20260924-chain1"></script>
   <script src="working-logo.bundle.js?v=20260922-b2"></script>
