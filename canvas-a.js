@@ -641,7 +641,7 @@
     }
   }
 
-  function activateNewSession() {
+  function activateNewSession({ focus = true } = {}) {
     if (!isInteractionB) return;
     setAgentPanelCollapsed(false, { focus: false });
     newSessionTabShell.hidden = false;
@@ -650,7 +650,7 @@
     agentPanel.classList.add('has-new-session-view');
     newSessionConversation.hidden = false;
     syncAgentViewTabs('new');
-    chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
+    if (focus) chatComposer.querySelector('textarea')?.focus({ preventScroll: true });
   }
 
   function resetCanvasChat() {
@@ -676,6 +676,12 @@
   function setCanvasChatSelection(images) {
     canvasSelectionImages = images.map(({ src, alt }) => ({ src, alt }));
     renderCanvasComposerImages();
+    if (canvasSelectionImages.length && contentShell.classList.contains('is-canvas-view')) {
+      if (canvasChatButton.getAttribute('aria-expanded') !== 'true') canvasChatButton.click();
+      // Make the references visible as soon as selection finishes, without
+      // stealing focus from the canvas prompt or submitting a message.
+      activateNewSession({ focus: false });
+    }
   }
 
   // Interaction C's Ask flow: user message, 2400ms Working preview, then reply.
