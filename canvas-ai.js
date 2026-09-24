@@ -8,7 +8,7 @@
 
   const asset = (name) => `assets/figma/canvas-ai/${name}`;
   const secondaryArtwork = mode === 'multi'
-    ? `<button class="canvas-ai-artwork canvas-ai-artwork-secondary" type="button" aria-label="Select winter landscape with the other painting"><img src="${asset('winter-landscape.png')}" alt="Snowy winter landscape painting" /></button>`
+    ? `<button class="canvas-ai-artwork canvas-ai-artwork-secondary" type="button" aria-label="Select winter landscape painting"><img src="${asset('winter-landscape.png')}" alt="Snowy winter landscape painting" /></button>`
     : '';
   const sourceImage = mode === 'single' ? 'winter-landscape.png' : 'water-lilies.png';
   const sourceAlt = mode === 'single' ? 'Snowy winter landscape painting' : 'Pastel water lilies painting';
@@ -31,7 +31,7 @@
   stage.innerHTML = `
     <div class="canvas-ai-camera">
     <div class="canvas-ai-grid" aria-hidden="true"></div>
-    <button class="canvas-ai-artwork canvas-ai-artwork-primary" type="button" aria-label="${mode === 'single' ? 'Select painting' : 'Select painting group'}"><img src="${asset(sourceImage)}" alt="${sourceAlt}" /></button>
+    <button class="canvas-ai-artwork canvas-ai-artwork-primary" type="button" aria-label="Select ${mode === 'single' ? 'painting' : 'water lilies painting'}"><img src="${asset(sourceImage)}" alt="${sourceAlt}" /></button>
     ${secondaryArtwork}
     <div class="canvas-ai-selection">
       <span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span><span class="canvas-ai-handle" aria-hidden="true"></span>
@@ -41,6 +41,7 @@
     </div>
     <figure class="canvas-ai-result" aria-label="AI generated image"><img src="${asset(resultImage)}" alt="${resultAlt}" /></figure>
     </div>
+      <div class="canvas-ai-marquee" aria-hidden="true"></div>
       <form class="canvas-ai-prompt prompt-box prompt-box-light" aria-label="Ask AI about selected images" data-node-id="2594:31668" inert>
         <div class="prompt-inline-field">
           <img class="prompt-agent-icon" src="assets/figma/selection-prompt-icon.svg" alt="" />
@@ -73,9 +74,12 @@
   const live = stage.querySelector('.canvas-ai-live');
   const sources = stage.querySelectorAll('.canvas-ai-artwork');
   const selection = stage.querySelector('.canvas-ai-selection');
+  const marquee = stage.querySelector('.canvas-ai-marquee');
   const timers = new Set();
   let disposeLibraryLoader = null;
   let intent = 'generate';
+  let selectedSources = [];
+  let marqueeGesture = null;
 
   const stopLibraryLoader = () => {
     disposeLibraryLoader?.();
@@ -131,7 +135,8 @@
   };
 
   const syncSelectionBounds = () => {
-    const { left, top, width, height } = boundsOf([...sources]);
+    if (!selectedSources.length) return;
+    const { left, top, width, height } = boundsOf(selectedSources);
     Object.assign(selection.style, {
       left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`,
     });
@@ -151,7 +156,7 @@
     const x = (width - bounds.width * scale) / 2 - bounds.left * scale;
     const y = (height - bounds.height * scale) / 2 - bounds.top * scale;
     camera.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-    const selected = boundsOf([...sources]);
+    const selected = boundsOf(selectedSources.length ? selectedSources : [...sources]);
     const promptWidth = Math.min(480, width - 32);
     Object.assign(prompt.style, {
       width: `${promptWidth}px`,
@@ -164,7 +169,7 @@
   const setState = (state) => {
     stage.dataset.state = state;
     prompt.inert = state !== 'prompt';
-    sources.forEach((source) => source.setAttribute('aria-pressed', String(state === 'prompt')));
+    sources.forEach((source) => source.setAttribute('aria-pressed', String(state === 'prompt' && selectedSources.includes(source))));
     frameCanvas();
   };
 
@@ -206,15 +211,16 @@
     window.requestAnimationFrame(() => { live.textContent = message; });
   };
 
-  const selectSource = () => {
+  const selectSource = (source) => {
     closeIntentMenu();
     clearTimers();
     stopLibraryLoader();
     board.removeAttribute('aria-busy');
+    selectedSources = [source];
     setState('prompt');
     input.value = '';
     syncInput();
-    announce(mode === 'single' ? 'Painting selected. Edit selection with AI.' : 'Two paintings selected. Edit selection with AI.');
+    announce('Painting selected. Edit selection with AI.');
     if (!window.matchMedia('(pointer: coarse)').matches) {
       window.requestAnimationFrame(() => input.focus({ preventScroll: true }));
     }
@@ -257,7 +263,7 @@
   window.addEventListener('pageshow', (event) => {
     // BFCache restores the DOM, but the pagehide cleanup already stopped React.
     if (event.persisted && usesLibraryLoader && stage.dataset.state === 'generating') {
-      selectSource();
+      selectSource(sources[0]);
     }
   });
 
@@ -273,7 +279,7 @@
     }
 
     closeIntentMenu();
-    const images = [...sources].map((source) => {
+    const images = selectedSources.map((source) => {
       const image = source.querySelector('img');
       return { src: image.src, alt: image.alt };
     });
@@ -283,6 +289,7 @@
       return;
     }
 
+    selectedSources = [];
     setState('idle');
     input.value = '';
     syncInput();
@@ -337,15 +344,95 @@
     if (intent === 'chat') sendToChat();
     else startGeneration();
   });
-  sources.forEach((source) => source.addEventListener('click', selectSource));
+  sources.forEach((source) => source.addEventListener('click', () => selectSource(source)));
 
-  stage.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('.canvas-ai-artwork, .canvas-ai-prompt, .canvas-ai-intent-menu')) return;
-    if (stage.dataset.state !== 'prompt') return;
+  const clearSelection = () => {
+    selectedSources = [];
+    sources.forEach((source) => source.classList.remove('is-marquee-hit'));
     closeIntentMenu();
     input.blur();
     setState('idle');
+  };
+
+  const localPointer = (event) => {
+    const rect = stage.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(rect.width, event.clientX - rect.left)),
+      y: Math.max(0, Math.min(rect.height, event.clientY - rect.top)),
+    };
+  };
+
+  const marqueeRect = (start, current) => ({
+    left: Math.min(start.x, current.x),
+    top: Math.min(start.y, current.y),
+    right: Math.max(start.x, current.x),
+    bottom: Math.max(start.y, current.y),
   });
+
+  const marqueeHits = (rect) => [...sources].filter((source) => {
+    const sourceRect = source.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    return rect.left < sourceRect.right - stageRect.left
+      && rect.right > sourceRect.left - stageRect.left
+      && rect.top < sourceRect.bottom - stageRect.top
+      && rect.bottom > sourceRect.top - stageRect.top;
+  });
+
+  stage.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('.canvas-ai-artwork, .canvas-ai-prompt, .canvas-ai-intent-menu')) return;
+    if (mode !== 'multi') {
+      if (stage.dataset.state === 'prompt') clearSelection();
+      return;
+    }
+    if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    if (!['idle', 'prompt'].includes(stage.dataset.state)) return;
+    clearSelection();
+    const start = localPointer(event);
+    marqueeGesture = { pointerId: event.pointerId, start, moved: false, hits: [] };
+    stage.setPointerCapture(event.pointerId);
+  });
+
+  stage.addEventListener('pointermove', (event) => {
+    if (!marqueeGesture || event.pointerId !== marqueeGesture.pointerId) return;
+    const current = localPointer(event);
+    const rect = marqueeRect(marqueeGesture.start, current);
+    if (!marqueeGesture.moved && Math.hypot(rect.right - rect.left, rect.bottom - rect.top) < 4) return;
+    marqueeGesture.moved = true;
+    event.preventDefault();
+    Object.assign(marquee.style, {
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.right - rect.left}px`,
+      height: `${rect.bottom - rect.top}px`,
+    });
+    stage.dataset.marquee = 'active';
+    marqueeGesture.hits = marqueeHits(rect);
+    sources.forEach((source) => source.classList.toggle('is-marquee-hit', marqueeGesture.hits.includes(source)));
+  });
+
+  const finishMarquee = (event) => {
+    if (!marqueeGesture || event.pointerId !== marqueeGesture.pointerId) return;
+    const { moved, hits } = marqueeGesture;
+    marqueeGesture = null;
+    delete stage.dataset.marquee;
+    sources.forEach((source) => source.classList.remove('is-marquee-hit'));
+    if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
+    if (!moved || !hits.length) {
+      announce(moved ? 'No paintings selected.' : 'Selection cleared.');
+      return;
+    }
+    selectedSources = hits;
+    setState('prompt');
+    input.value = '';
+    syncInput();
+    announce(`${hits.length} ${hits.length === 1 ? 'painting' : 'paintings'} selected. Edit selection with AI.`);
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+      window.requestAnimationFrame(() => input.focus({ preventScroll: true }));
+    }
+  };
+
+  stage.addEventListener('pointerup', finishMarquee);
+  stage.addEventListener('pointercancel', finishMarquee);
 
   stage.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
@@ -356,11 +443,14 @@
       return;
     }
     if (stage.dataset.state === 'prompt') {
-      setState('idle');
-      sources[0].focus({ preventScroll: true });
+      const focusTarget = selectedSources[0] || sources[0];
+      clearSelection();
+      focusTarget.focus({ preventScroll: true });
       announce('Selection cleared.');
     }
   });
 
-  announce('Select a painting to edit it with AI.');
+  announce(mode === 'multi'
+    ? 'Drag across paintings to select multiple images, or choose one painting.'
+    : 'Select a painting to edit it with AI.');
 })();

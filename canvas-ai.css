@@ -16,6 +16,11 @@
   user-select: none;
 }
 
+.canvas-ai-stage[data-mode="multi"] {
+  cursor: crosshair;
+  touch-action: none;
+}
+
 .canvas-ai-camera {
   position: absolute;
   inset: 0;
@@ -53,6 +58,14 @@
 .canvas-ai-artwork {
   z-index: 2;
   cursor: pointer;
+}
+
+.canvas-ai-stage[data-mode="multi"] .canvas-ai-artwork {
+  touch-action: manipulation;
+}
+
+.canvas-ai-artwork.is-marquee-hit {
+  box-shadow: 0 0 0 1.5px var(--selection-blue), 0 4px 16px rgba(0, 0, 0, .12);
 }
 
 .canvas-ai-artwork:focus { outline: none; }
@@ -115,6 +128,20 @@
 .canvas-ai-handle:nth-child(2) { top: -5px; right: -5px; }
 .canvas-ai-handle:nth-child(3) { bottom: -5px; left: -5px; }
 .canvas-ai-handle:nth-child(4) { right: -5px; bottom: -5px; }
+
+.canvas-ai-marquee {
+  position: absolute;
+  z-index: 6;
+  display: none;
+  border: 1px solid var(--selection-blue);
+  background: rgba(62, 99, 221, .09);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.canvas-ai-stage[data-marquee="active"] .canvas-ai-marquee {
+  display: block;
+}
 
 .canvas-ai-toolbar,
 .canvas-ai-prompt {
@@ -570,7 +597,7 @@
 }
 
 .canvas-ai-stage[data-mode="multi"] .canvas-ai-selection {
-  /* Bounds come from the union of both artwork rectangles in canvas-ai.js. */
+  /* Bounds come from the union of the actual marquee selection. */
   box-sizing: border-box;
 }
 
