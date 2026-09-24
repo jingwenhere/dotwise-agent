@@ -1,16 +1,16 @@
-/* D/E are isolated loading studies on Canvas B's existing five-step flow. */
+/* A/C are isolated edge-glow and frosted-glass loading studies. */
 .canvas-board {
-  /* Canvas E's existing #ddf9f2 mint, shared by both edge-glow studies. */
+  /* Canvas A's existing #ddf9f2 mint, shared by both edge-glow studies. */
   --canvas-edge-glow-color: oklch(.96 .031 178.93);
 }
 
-:is([data-sandbox-variant="canvas-d"], [data-sandbox-variant="canvas-e"]) .canvas-board {
+:is([data-sandbox-variant="canvas-a"], [data-sandbox-variant="canvas-c"]) .canvas-board {
   --selection-blue: #3e63dd;
   --ease-out-ui: cubic-bezier(.32, .72, 0, 1);
   isolation: isolate;
 }
 
-/* D: a real image behind a frosted pane; no colored edge or shimmer. */
+/* C: a real image behind a frosted pane; no colored edge or shimmer. */
 .canvas-ai-stage[data-loading-effect="glass"] .canvas-ai-loader {
   overflow: hidden;
   background: #dce0df;
@@ -100,7 +100,7 @@
   50% { transform: translate(5%, -4%) scale(1.14); opacity: .74; }
 }
 
-/* E: a fixed square with an inward alpha fade. Only the color field rotates. */
+/* A: a fixed square with an inward alpha fade. Only the color field rotates. */
 .canvas-ai-stage[data-loading-effect="glow"] .canvas-ai-loader {
   overflow: hidden;
   background: #f8f9f9;
