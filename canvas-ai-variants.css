@@ -29,9 +29,9 @@
 .canvas-ai-glass-pane {
   position: absolute;
   inset: 0;
-  background: rgb(245 247 247 / .1);
-  -webkit-backdrop-filter: blur(18px) saturate(.45);
-  backdrop-filter: blur(18px) saturate(.45);
+  background: rgb(245 247 247 / .045);
+  -webkit-backdrop-filter: blur(12px) saturate(.7);
+  backdrop-filter: blur(12px) saturate(.7);
   pointer-events: none;
 }
 
@@ -47,7 +47,7 @@
   border-radius: 38% 62% 53% 47% / 54% 38% 62% 46%;
   background: rgb(245 247 247);
   filter: blur(18px);
-  opacity: .12;
+  opacity: .07;
   transform: translate(-3%, 2%) scale(.94);
 }
 
@@ -97,8 +97,8 @@
 }
 
 @keyframes canvas-ai-glass-mist {
-  0%, 100% { transform: translate(-3%, 2%) scale(.94); opacity: .055; }
-  50% { transform: translate(5%, -4%) scale(1.14); opacity: .28; }
+  0%, 100% { transform: translate(-3%, 2%) scale(.94); opacity: .025; }
+  50% { transform: translate(5%, -4%) scale(1.14); opacity: .15; }
 }
 
 /* A: a fixed square with an inward alpha fade. Only the color field rotates. */
@@ -131,7 +131,7 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .canvas-ai-glass-image { filter: blur(18px) saturate(.45); }
+  .canvas-ai-glass-image { filter: blur(12px) saturate(.7); }
 }
 
 @media (prefers-reduced-motion: reduce) {
